@@ -55,5 +55,24 @@ export const textSchema = {
           actions: 'Actions',
         }
       },
+      adminCategories: {
+        title: 'Category Management',
+        addCategoryBtn: 'Add New Category',
+        editBtn: 'Edit',
+        deleteBtn: 'Delete',
+        formTitleAdd: 'Create New Category',
+        formTitleEdit: 'Edit Category',
+        nameLabel: 'Category Name',
+        descLabel: 'Description',
+        activeLabel: 'Is Active',
+        saveBtn: 'Save Category',
+        cancelBtn: 'Cancel',
+        tableHeaders: {
+          name: 'Name',
+          description: 'Description',
+          status: 'Status',
+          actions: 'Actions',
+        }
+      },
     },
   };

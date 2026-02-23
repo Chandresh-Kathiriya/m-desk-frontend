@@ -10,6 +10,10 @@ import UserRegister from './modules/user/pages/UserRegister';
 // Admin Imports
 import AdminLogin from './modules/admin/pages/adminLogin';
 import AdminRegister from './modules/admin/pages/adminRegister';
+import CategoryList from './modules/admin/pages/CategoryList';
+import ProductList from './modules/admin/pages/ProductList';
+import ProductForm from './modules/admin/pages/ProductForm';
+import CategoryForm from './modules/admin/pages/CategoryForm';
 
 function App() {
   return (
@@ -27,10 +31,13 @@ function App() {
           {/* admin routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/register" element={<AdminRegister />} />
+          <Route path="/admin/products/new" element={<ProductForm />} />
+          <Route path="/admin/products/:id/edit" element={<ProductForm />} />
+          <Route path="/admin/categories/new" element={<CategoryForm />} />
+          <Route path="/admin/products" element={<ProductList />} />
+          <Route path="/admin/categories" element={<CategoryList />} />
+          <Route path="/admin/categories/:id/edit" element={<CategoryForm />} />
           
-          {/* Future Admin Routes */}
-          {/* <Route path="/admin/login" element={<AdminLogin />} /> */}
-          {/* <Route path="/admin/register" element={<AdminRegister />} /> */}
         </Routes>
       </Layout>
     </BrowserRouter>

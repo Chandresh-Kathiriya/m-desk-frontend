@@ -8,6 +8,13 @@ import {
   productUpdateReducer, 
   productDeleteReducer 
 } from './admin/productReducers';
+import {
+    categoryListReducer,
+    categoryDetailsReducer,
+    categoryCreateReducer,
+    categoryUpdateReducer,
+    categoryDeleteReducer
+  } from './admin/categoryReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -17,6 +24,11 @@ const rootReducer = combineReducers({
   productCreate: productCreateReducer,
   productUpdate: productUpdateReducer,
   productDelete: productDeleteReducer,
+  categoryList: categoryListReducer,
+  categoryDetails: categoryDetailsReducer,
+  categoryCreate: categoryCreateReducer,
+  categoryUpdate: categoryUpdateReducer,
+  categoryDelete: categoryDeleteReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

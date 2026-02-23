@@ -28,11 +28,17 @@ export const listAdminProducts = () => async (dispatch: any, getState: () => Roo
 };
 
 // Fetch single product
-export const listProductDetails = (id: string) => async (dispatch: any) => {
+export const listProductDetails = (id: string) => async (dispatch: any, getState: () => RootState) => {
   try {
     dispatch({ type: PRODUCT_DETAILS_REQUEST });
-    // This is public/accessible for loading details into the edit form
-    const { data } = await axios.get(`/api/products/${id}`);
+
+    // Grab the admin token
+    const { adminAuth: { adminInfo } } = getState();
+    const config = { headers: { Authorization: `Bearer ${adminInfo.token}` } };
+
+    // Hit the protected admin route!
+    const { data } = await axios.get(`/api/products/admin/${id}`, config);
+
     dispatch({ type: PRODUCT_DETAILS_SUCCESS, payload: data.product });
   } catch (error: any) {
     dispatch({
