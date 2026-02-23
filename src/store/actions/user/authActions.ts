@@ -27,10 +27,12 @@ export const registerUser = (userData: any) => async (dispatch: any) => {
     dispatch({ type: USER_REGISTER_REQUEST });
 
     const config = { headers: { 'Content-Type': 'application/json' } };
-    const { data } = await axios.post('/api/auth/register', userData, config);
+    
+    // Explicitly pass role: 'customer' to the backend
+    const { data } = await axios.post('/api/auth/register', { ...userData, role: 'customer' }, config);
 
     dispatch({ type: USER_REGISTER_SUCCESS, payload: data });
-    dispatch({ type: USER_LOGIN_SUCCESS, payload: data }); // Log them in automatically
+    dispatch({ type: USER_LOGIN_SUCCESS, payload: data }); 
     localStorage.setItem('userInfo', JSON.stringify(data));
   } catch (error: any) {
     dispatch({
