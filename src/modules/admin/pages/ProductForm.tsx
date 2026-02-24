@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Badge, Image, ListGroup, InputGroup } from 'react-bootstrap';
+import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Badge, Image, ListGroup, InputGroup, Table } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { listProductDetails, createProduct, updateProduct } from '../../../store/actions/admin/productActions';
@@ -15,27 +15,28 @@ const ProductForm: React.FC = () => {
   const text = textSchema.en.adminProducts;
   const isEditing = Boolean(id);
   const adminAuth = useSelector((state: RootState) => state.adminAuth);
-  const { adminInfo } = adminAuth;
+  const { adminInfo } = adminAuth as any;
 
+  // --- STRICTLY EMPTY DEFAULTS ---
   const [formData, setFormData] = useState({
     productName: '',
     productCategory: '', 
-    productType: 'shirt',
-    material: 'cotton',
+    productType: '', // Blank default
+    material: '',    // Blank default
     colors: '', 
+    sizes: '',       // e.g., "S, M, L"
+    variants: [] as any[], // The SKU matrix
     salesPrice: 0,
     salesTax: 0,
     purchasePrice: 0,
     purchaseTax: 0,
     published: false,
     images: [] as string[],
-    currentStock: 0,
+    currentStock: 0, // Read-only total
   });
 
-  // --- NEW: DYNAMIC IMAGE SPECS STATE ---
   const [uploading, setUploading] = useState(false);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
-  // Default to two empty specs, but admins can add more!
   const [imgSpecs, setImgSpecs] = useState([{ name: 'color', value: '' }, { name: 'view', value: '' }]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,12 +52,9 @@ const ProductForm: React.FC = () => {
   const productUpdate = useSelector((state: RootState) => state.productUpdate);
   const { loading: loadingUpdate, error: errorUpdate, success: successUpdate } = productUpdate;
 
-  useEffect(() => {
-    // If there is no admin logged in, kick them back to the login page immediately!
-    if (!adminInfo || !adminInfo.token) {
-      navigate('/admin/login');
-    }
-  }, [adminInfo, navigate]);
+  // useEffect(() => {
+  //   if (!adminInfo || !adminInfo.token) navigate('/admin/login');
+  // }, [adminInfo, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -99,9 +97,11 @@ const ProductForm: React.FC = () => {
         setFormData({
           productName: product.productName,
           productCategory: product.productCategory?._id || product.productCategory, 
-          productType: product.productType,
-          material: product.material,
-          colors: product.colors.join(', '), 
+          productType: product.productType || '',
+          material: product.material || '',
+          colors: product.colors?.join(', ') || '', 
+          sizes: product.sizes?.join(', ') || '', 
+          variants: product.variants || [],
           salesPrice: product.salesPrice,
           salesTax: product.salesTax,
           purchasePrice: product.purchasePrice,
@@ -131,19 +131,43 @@ const ProductForm: React.FC = () => {
     setShowDropdown(false);
   };
 
-  // --- DYNAMIC IMAGE LOGIC ---
+  // --- VARIANT / SKU GENERATOR ---
+  const generateVariants = () => {
+    if (!formData.productType) return alert('Please select a Product Type first to generate SKUs.');
+    if (!formData.colors || !formData.sizes) return alert('Please enter at least one Color and one Size.');
+
+    const colorArray = formData.colors.split(',').map(c => c.trim()).filter(c => c);
+    const sizeArray = formData.sizes.split(',').map(s => s.trim()).filter(s => s);
+    const generatedVariants: any[] = [];
+
+    colorArray.forEach(color => {
+      sizeArray.forEach(size => {
+        const typePrefix = formData.productType.toUpperCase().substring(0, 3);
+        const colorPrefix = color.toUpperCase().substring(0, 3);
+        const sku = `${typePrefix}-${colorPrefix}-${size.toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+
+        generatedVariants.push({
+          sku,
+          color,
+          size,
+          stock: 0, // Admin does not edit this manually!
+        });
+      });
+    });
+
+    setFormData({ ...formData, variants: generatedVariants });
+  };
+
+  // --- IMAGE UPLOAD LOGIC ---
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 10 * 1024 * 1024) {
       alert('File is too large! Please upload an image smaller than 10MB.');
       e.target.value = ''; 
       return;
     }
-    
     setPendingImage(file);
-    // Reset specs when new image is selected
     setImgSpecs([{ name: 'color', value: '' }, { name: 'view', value: '' }]);
   };
 
@@ -155,10 +179,13 @@ const ProductForm: React.FC = () => {
 
   const confirmUpload = async () => {
     if (!pendingImage) return;
+    if (!adminInfo || !adminInfo.token) {
+      alert('Authentication error. Please log in again.');
+      return navigate('/admin/login');
+    }
 
     const validSpecs = imgSpecs.filter(s => s.name.trim() && s.value.trim());
     const specString = validSpecs.map(s => `${s.name.trim().toLowerCase()}-${s.value.trim().toLowerCase()}`).join('_');
-
     const originalNameWithoutExt = pendingImage.name.substring(0, pendingImage.name.lastIndexOf('.')) || pendingImage.name;
     const finalSpecName = specString ? `${specString}_${originalNameWithoutExt}` : originalNameWithoutExt;
 
@@ -167,18 +194,9 @@ const ProductForm: React.FC = () => {
     uploadData.append('image', pendingImage);
     
     setUploading(true);
-
     try {
-      // --- NEW: Attach the JWT Token securely in the Authorization Header ---
-      const config = { 
-        headers: { 
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${adminInfo.token}` // The backend will verify this!
-        } 
-      };
-      
+      const config = { headers: { Authorization: `Bearer ${adminInfo.token}` } };
       const { data } = await axios.post('/api/upload', uploadData, config);
-
       setFormData({ ...formData, images: [...formData.images, data.imageUrl] });
       setUploading(false);
       setPendingImage(null); 
@@ -191,10 +209,12 @@ const ProductForm: React.FC = () => {
   const submitHandler = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.productCategory) return alert('Please search and select a valid Category.');
+    if (formData.variants.length === 0) return alert('Please generate at least one variant before saving.');
     
     const formattedData = {
       ...formData,
-      colors: formData.colors.split(',').map((c: string) => c.trim()).filter((c: string) => c),
+      colors: formData.colors.split(',').map(c => c.trim()).filter(c => c),
+      sizes: formData.sizes.split(',').map(s => s.trim()).filter(s => s),
     };
 
     if (isEditing) dispatch(updateProduct({ _id: id, ...formattedData }));
@@ -203,14 +223,14 @@ const ProductForm: React.FC = () => {
 
   return (
     <Container className="py-4">
-      <Card className="shadow-sm mx-auto" style={{ maxWidth: '800px', borderTop: '4px solid var(--primary-color)' }}>
+      <Card className="shadow-sm mx-auto" style={{ maxWidth: '900px', borderTop: '4px solid var(--primary-color)' }}>
         <Card.Body>
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h3 className="mb-0">{isEditing ? text.formTitleEdit : text.formTitleAdd}</h3>
             {isEditing && (
               <h5>
                 <Badge bg={formData.currentStock > 0 ? 'success' : 'danger'}>
-                  Current Stock: {formData.currentStock}
+                  Total Stock: {formData.currentStock}
                 </Badge>
               </h5>
             )}
@@ -225,70 +245,8 @@ const ProductForm: React.FC = () => {
               <Form.Control type="text" name="productName" value={formData.productName} onChange={handleChange} required />
             </Form.Group>
 
-            <Form.Group className="mb-4 p-3 bg-light rounded border">
-              <Form.Label className="fw-bold">Product Images</Form.Label>
-              <Form.Control type="file" onChange={handleFileSelect} disabled={uploading} accept="image/*" />
-              
-              {/* --- DYNAMIC SPECIFICATION FORM --- */}
-              {pendingImage && (
-                <Card className="mt-3 border-info">
-                  <Card.Body className="bg-white">
-                    <div className="d-flex justify-content-between mb-2">
-                      <h6 className="text-info m-0">Image Specifications</h6>
-                      <Button variant="outline-primary" size="sm" onClick={() => setImgSpecs([...imgSpecs, { name: '', value: '' }])}>
-                        + Add Spec
-                      </Button>
-                    </div>
-                    
-                    {imgSpecs.map((spec, index) => (
-                      <Row key={index} className="mb-2">
-                        <Col md={5}>
-                          <InputGroup size="sm">
-                            <InputGroup.Text>Name</InputGroup.Text>
-                            <Form.Control value={spec.name} onChange={(e) => handleSpecChange(index, 'name', e.target.value)} placeholder="e.g. color" />
-                          </InputGroup>
-                        </Col>
-                        <Col md={5}>
-                          <InputGroup size="sm">
-                            <InputGroup.Text>Value</InputGroup.Text>
-                            <Form.Control value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} placeholder="e.g. black" />
-                          </InputGroup>
-                        </Col>
-                        <Col md={2}>
-                          <Button variant="outline-danger" size="sm" className="w-100" onClick={() => setImgSpecs(imgSpecs.filter((_, i) => i !== index))}>
-                            Remove
-                          </Button>
-                        </Col>
-                      </Row>
-                    ))}
-                    
-                    <div className="d-flex justify-content-end mt-3">
-                      <Button variant="info" size="sm" className="text-white px-4" onClick={confirmUpload} disabled={uploading}>
-                        {uploading ? <Spinner size="sm" animation="border" /> : `Upload File: ${pendingImage.name}`}
-                      </Button>
-                    </div>
-                  </Card.Body>
-                </Card>
-              )}
-              
-              <div className="d-flex flex-wrap gap-2 mt-3">
-                {formData.images.map((imgUrl, index) => (
-                  <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
-                    <Image src={imgUrl} thumbnail style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <Button 
-                      variant="danger" size="sm" className="position-absolute top-0 end-0 p-0" 
-                      style={{ width: '20px', height: '20px', lineHeight: '10px' }}
-                      onClick={() => setFormData({ ...formData, images: formData.images.filter((_, i) => i !== index) })}
-                    >
-                      &times;
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </Form.Group>
-
-            {/* Rest of the form inputs remain the same... */}
-            <Row className="mb-3">
+            {/* --- MASTER DATA: CATEGORY, TYPE, MATERIAL --- */}
+            <Row className="mb-3 bg-light p-3 rounded mx-0">
               <Col md={4} ref={dropdownRef}>
                 <Form.Group className="position-relative">
                   <Form.Label>{text.categoryLabel}</Form.Label>
@@ -316,7 +274,9 @@ const ProductForm: React.FC = () => {
               <Col md={4}>
                 <Form.Group>
                   <Form.Label>{text.typeLabel}</Form.Label>
-                  <Form.Select name="productType" value={formData.productType} onChange={handleChange}>
+                  {/* DEFAULT REMOVED - FORCED SELECTION */}
+                  <Form.Select name="productType" value={formData.productType} onChange={handleChange} required>
+                    <option value="">Select Type...</option>
                     <option value="shirt">Shirt</option>
                     <option value="pant">Pant</option>
                     <option value="t-shirt">T-Shirt</option>
@@ -328,10 +288,13 @@ const ProductForm: React.FC = () => {
                   </Form.Select>
                 </Form.Group>
               </Col>
+              
               <Col md={4}>
                 <Form.Group>
                   <Form.Label>{text.materialLabel}</Form.Label>
-                  <Form.Select name="material" value={formData.material} onChange={handleChange}>
+                  {/* DEFAULT REMOVED - FORCED SELECTION */}
+                  <Form.Select name="material" value={formData.material} onChange={handleChange} required>
+                    <option value="">Select Material...</option>
                     <option value="cotton">Cotton</option>
                     <option value="nylon">Nylon</option>
                     <option value="polyester">Polyester</option>
@@ -344,11 +307,117 @@ const ProductForm: React.FC = () => {
               </Col>
             </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Label>{text.colorsLabel}</Form.Label>
-              <Form.Control type="text" name="colors" placeholder="e.g., Red, Blue" value={formData.colors} onChange={handleChange} required />
+            {/* --- IMAGES --- */}
+            <Form.Group className="mb-4 p-3 border rounded">
+              <Form.Label className="fw-bold">Product Images</Form.Label>
+              <Form.Control type="file" onChange={handleFileSelect} disabled={uploading} accept="image/*" />
+              
+              {pendingImage && (
+                <Card className="mt-3 border-info">
+                  <Card.Body className="bg-white">
+                    <div className="d-flex justify-content-between mb-2">
+                      <h6 className="text-info m-0">Image Specifications</h6>
+                      <Button variant="outline-primary" size="sm" onClick={() => setImgSpecs([...imgSpecs, { name: '', value: '' }])}>
+                        + Add Spec
+                      </Button>
+                    </div>
+                    {imgSpecs.map((spec, index) => (
+                      <Row key={index} className="mb-2">
+                        <Col md={5}>
+                          <InputGroup size="sm">
+                            <InputGroup.Text>Name</InputGroup.Text>
+                            <Form.Control value={spec.name} onChange={(e) => handleSpecChange(index, 'name', e.target.value)} placeholder="e.g. color" />
+                          </InputGroup>
+                        </Col>
+                        <Col md={5}>
+                          <InputGroup size="sm">
+                            <InputGroup.Text>Value</InputGroup.Text>
+                            <Form.Control value={spec.value} onChange={(e) => handleSpecChange(index, 'value', e.target.value)} placeholder="e.g. black" />
+                          </InputGroup>
+                        </Col>
+                        <Col md={2}>
+                          <Button variant="outline-danger" size="sm" className="w-100" onClick={() => setImgSpecs(imgSpecs.filter((_, i) => i !== index))}>
+                            Remove
+                          </Button>
+                        </Col>
+                      </Row>
+                    ))}
+                    <div className="d-flex justify-content-end mt-3">
+                      <Button variant="info" size="sm" className="text-white px-4" onClick={confirmUpload} disabled={uploading}>
+                        {uploading ? <Spinner size="sm" animation="border" /> : `Upload File`}
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              )}
+              
+              <div className="d-flex flex-wrap gap-2 mt-3">
+                {formData.images.map((imgUrl, index) => (
+                  <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
+                    <Image src={imgUrl} thumbnail style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <Button 
+                      variant="danger" size="sm" className="position-absolute top-0 end-0 p-0" 
+                      style={{ width: '20px', height: '20px', lineHeight: '10px' }}
+                      onClick={() => setFormData({ ...formData, images: formData.images.filter((_, i) => i !== index) })}
+                    >
+                      &times;
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </Form.Group>
 
+            {/* --- VARIANT GENERATION (COLORS & SIZES) --- */}
+            <div className="mb-4 p-3 bg-light border rounded">
+              <h6 className="fw-bold mb-3">Inventory Variants (SKUs)</h6>
+              <Row className="mb-3">
+                <Col md={5}>
+                  <Form.Group>
+                    <Form.Label>Colors (Comma separated)</Form.Label>
+                    <Form.Control type="text" name="colors" placeholder="e.g., Red, Blue" value={formData.colors} onChange={handleChange} required />
+                  </Form.Group>
+                </Col>
+                <Col md={5}>
+                  <Form.Group>
+                    <Form.Label>Sizes (Comma separated)</Form.Label>
+                    <Form.Control type="text" name="sizes" placeholder="e.g., S, M, L" value={formData.sizes} onChange={handleChange} required />
+                  </Form.Group>
+                </Col>
+                <Col md={2} className="d-flex align-items-end">
+                  <Button variant="dark" className="w-100" onClick={generateVariants}>
+                    Generate
+                  </Button>
+                </Col>
+              </Row>
+
+              {/* Display Generated SKUs */}
+              {formData.variants.length > 0 && (
+                <Table size="sm" bordered hover className="mt-3 bg-white">
+                  <thead className="table-dark">
+                    <tr>
+                      <th>SKU</th>
+                      <th>Color</th>
+                      <th>Size</th>
+                      <th>Stock (Read-Only)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.variants.map((v, i) => (
+                      <tr key={i}>
+                        <td className="font-monospace">{v.sku}</td>
+                        <td>{v.color}</td>
+                        <td>{v.size}</td>
+                        <td>
+                          <Badge bg={v.stock > 0 ? 'success' : 'secondary'}>{v.stock}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </div>
+
+            {/* --- PRICING --- */}
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>
