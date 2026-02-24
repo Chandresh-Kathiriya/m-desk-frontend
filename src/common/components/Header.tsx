@@ -43,6 +43,7 @@ const Header: React.FC = () => {
                 <NavDropdown title="Master Data" id="admin-master-data-dropdown">
                   <NavDropdown.Item as={Link} to="/admin/products">Products</NavDropdown.Item>
                   <NavDropdown.Item as={Link} to="/admin/categories">Categories</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/admin/inventory">Inventory</NavDropdown.Item>
                 </NavDropdown>
                 <span className="text-white mx-3" style={{ fontSize: 'var(--font-sm)' }}>
                   Admin: {adminInfo?.user?.name}

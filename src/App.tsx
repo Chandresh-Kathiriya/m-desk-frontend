@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Common Imports
 import Layout from './common/components/Layout';
+import HomePage from './modules/storefront/pages/HomePage';
 
 // User Imports
 import UserLogin from './modules/user/pages/UserLogin';
@@ -14,6 +15,8 @@ import CategoryList from './modules/admin/pages/CategoryList';
 import ProductList from './modules/admin/pages/ProductList';
 import ProductForm from './modules/admin/pages/ProductForm';
 import CategoryForm from './modules/admin/pages/CategoryForm';
+import MasterDataManagement from './modules/admin/pages/MasterDataManagement';
+import InventoryManagement from './modules/admin/pages/InventoryManagement';
 
 function App() {
   return (
@@ -22,7 +25,7 @@ function App() {
       <Layout>
         <Routes>
           {/* comman routes */}
-          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/" element={<HomePage />} />
 
           {/* User */}
           <Route path="/login" element={<UserLogin />} />
@@ -37,6 +40,8 @@ function App() {
           <Route path="/admin/products" element={<ProductList />} />
           <Route path="/admin/categories" element={<CategoryList />} />
           <Route path="/admin/categories/:id/edit" element={<CategoryForm />} />
+          <Route path="/admin/master-data" element={<MasterDataManagement />} />
+          <Route path="/admin/inventory" element={<InventoryManagement />} />
           
         </Routes>
       </Layout>

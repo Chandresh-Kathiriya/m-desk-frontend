@@ -13,8 +13,15 @@ import {
     categoryDetailsReducer,
     categoryCreateReducer,
     categoryUpdateReducer,
-    categoryDeleteReducer
+    categoryDeleteReducer,
   } from './admin/categoryReducers';
+import { 
+  masterDataListReducer, 
+  masterDataCreateReducer,
+  masterDataUpdateReducer
+} from './admin/masterDataReducers';
+import { inventoryListReducer, inventoryUpdateReducer } from './admin/inventoryReducers';
+import { storefrontProductListReducer } from './storefront/productReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -29,6 +36,12 @@ const rootReducer = combineReducers({
   categoryCreate: categoryCreateReducer,
   categoryUpdate: categoryUpdateReducer,
   categoryDelete: categoryDeleteReducer,
+  masterDataList: masterDataListReducer,
+  masterDataCreate: masterDataCreateReducer,
+  masterDataUpdate: masterDataUpdateReducer,
+  inventoryList: inventoryListReducer,
+  inventoryUpdate: inventoryUpdateReducer,
+  storefrontProductList: storefrontProductListReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

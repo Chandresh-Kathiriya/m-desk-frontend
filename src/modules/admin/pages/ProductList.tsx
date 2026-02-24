@@ -1,105 +1,99 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Table, Button, Badge, Card, Spinner, Alert } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Container, Table, Button, Spinner, Alert, Card, Badge } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import { listAdminProducts, deleteProduct } from '../../../store/actions/admin/productActions';
 import { RootState } from '../../../store/reducers';
-import { textSchema } from '../../../schemas/text/schema';
 
 const ProductList: React.FC = () => {
   const dispatch = useDispatch<any>();
   const navigate = useNavigate();
-  const text = textSchema.en.adminProducts;
 
-  // Get auth info to ensure only admins are here (optional safeguard)
-  const adminAuth = useSelector((state: RootState) => state.adminAuth);
-  const { adminInfo } = adminAuth;
-
-  // Get the product list state
   const productList = useSelector((state: RootState) => state.productList);
   const { loading, error, products } = productList;
 
-  // Get the delete state so we know when to refresh the list
   const productDelete = useSelector((state: RootState) => state.productDelete);
   const { success: successDelete } = productDelete;
 
   useEffect(() => {
-    if (!adminInfo) {
-      navigate('/admin/login');
-    } else {
-      // Re-fetch products on load, or when a product is successfully deleted
-      dispatch(listAdminProducts());
-    }
-  }, [dispatch, navigate, adminInfo, successDelete]);
+    dispatch(listAdminProducts());
+  }, [dispatch, successDelete]);
 
   const deleteHandler = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+    if (window.confirm('Are you sure you want to delete this product? All its SKUs will be lost.')) {
       dispatch(deleteProduct(id));
     }
   };
 
   return (
     <Container className="py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>{text.title}</h2>
-        <Link to="/admin/products/new">
-          <Button variant="primary" style={{ backgroundColor: 'var(--primary-color)' }}>
-            + {text.addProductBtn}
-          </Button>
-        </Link>
-      </div>
+      <Card className="shadow-sm border-top border-primary border-4">
+        <Card.Body>
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <h3 className="mb-0">Product Catalog</h3>
+            <Button variant="primary" onClick={() => navigate('/admin/products/new')}>
+              + Add New Product
+            </Button>
+          </div>
 
-      {loading ? (
-        <div className="text-center py-5"><Spinner animation="border" /></div>
-      ) : error ? (
-        <Alert variant="danger">{error}</Alert>
-      ) : (
-        <Card className="shadow-sm">
-          <Card.Body className="p-0">
-            <Table responsive hover className="mb-0">
-              <thead style={{ backgroundColor: 'var(--bg-light)' }}>
+          {loading ? (
+            <Spinner animation="border" className="d-block mx-auto my-5" />
+          ) : error ? (
+            <Alert variant="danger">{error}</Alert>
+          ) : (
+            <Table responsive hover className="align-middle bg-white">
+              <thead className="table-light">
                 <tr>
-                  <th>{text.tableHeaders.name}</th>
-                  <th>{text.tableHeaders.category}</th>
-                  <th>{text.tableHeaders.price}</th>
-                  <th>{text.tableHeaders.stock}</th>
-                  <th>{text.tableHeaders.status}</th>
-                  <th className="text-end">{text.tableHeaders.actions}</th>
+                  <th>Product Name</th>
+                  <th>Category</th>
+                  <th>Brand</th>
+                  <th>Type</th>
+                  <th>Variants (SKUs)</th>
+                  <th>Status</th>
+                  <th className="text-end">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {products?.map((product: any) => (
-                  <tr key={product._id} className="align-middle">
-                    <td><strong>{product.productName}</strong></td>
-                    <td className="text-capitalize">{product.productCategory?.name || '-'}</td>
-                    <td>₹{product.salesPrice}</td>
+                {products && products.map((product: any) => (
+                  <tr key={product._id}>
+                    <td className="fw-bold">{product.productName}</td>
+                    <td>{product.productCategory?.name || '-'}</td>
+                    <td>{product.brand?.name || '-'}</td>
+                    <td><Badge bg="info" className="text-dark">{product.productType}</Badge></td>
                     <td>
-                      <Badge bg={product.currentStock > 0 ? 'success' : 'danger'}>
-                        {product.currentStock}
+                      <Badge bg="secondary" pill>
+                        {product.variants?.length || 0} SKUs
                       </Badge>
                     </td>
                     <td>
-                      <Badge bg={product.published ? 'primary' : 'secondary'}>
-                        {product.published ? 'Published' : 'Hidden'}
-                      </Badge>
+                      {product.published ? (
+                        <Badge bg="success">Published</Badge>
+                      ) : (
+                        <Badge bg="warning" text="dark">Draft</Badge>
+                      )}
                     </td>
                     <td className="text-end">
-                      <Link to={`/admin/products/${product._id}/edit`}>
-                        <Button variant="outline-info" size="sm" className="me-2">
-                          {text.editBtn}
-                        </Button>
-                      </Link>
+                      <Button variant="outline-primary" size="sm" className="me-2" onClick={() => navigate(`/admin/products/${product._id}/edit`)}>
+                        Edit
+                      </Button>
                       <Button variant="outline-danger" size="sm" onClick={() => deleteHandler(product._id)}>
-                        {text.deleteBtn}
+                        Delete
                       </Button>
                     </td>
                   </tr>
                 ))}
+                {(!products || products.length === 0) && (
+                  <tr>
+                    <td colSpan={7} className="text-center text-muted py-4">
+                      No products found. Start by creating a new one!
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </Table>
-          </Card.Body>
-        </Card>
-      )}
+          )}
+        </Card.Body>
+      </Card>
     </Container>
   );
 };
