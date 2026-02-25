@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Row, Col, Spinner, Alert, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Spinner, Alert, Button, Badge, Form } from 'react-bootstrap';
 import { getStorefrontProductDetails } from '../../../store/actions/storefront/productActions';
 import { RootState } from '../../../store/reducers';
+import { useNavigate } from 'react-router-dom';
+import { addToCart } from '../../../store/actions/user/cartActions';
 
 const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +19,9 @@ const ProductDetailsPage: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [mainImage, setMainImage] = useState<string>('');
+
+  const navigate = useNavigate();
+  const [qty, setQty] = useState<number>(1);
 
   useEffect(() => {
     if (id) {
@@ -86,6 +91,13 @@ const ProductDetailsPage: React.FC = () => {
   const isSizeAvailableForColor = (size: string) => {
     const variant = product.variants.find((v: any) => v.color === selectedColor && v.size === size);
     return variant ? variant.stock > 0 : false;
+  };
+
+  const addToCartHandler = () => {
+    if (currentVariant) {
+      dispatch(addToCart(product, currentVariant, qty));
+      navigate('/cart'); // Send them straight to the cart page!
+    }
   };
 
   return (
@@ -190,15 +202,44 @@ const ProductDetailsPage: React.FC = () => {
             {currentVariant && <div className="text-muted small mt-2">SKU: {currentVariant.sku}</div>}
           </div>
 
-          {/* Add to Cart Button */}
-          <Button 
-            variant="dark" 
-            size="lg" 
-            className="w-100 py-3 mt-3 fw-bold text-uppercase"
-            disabled={!currentVariant || currentVariant.stock === 0}
-          >
-            {currentVariant && currentVariant.stock > 0 ? 'Add to Cart' : 'Currently Unavailable'}
-          </Button>
+          {/* Quantity & Add to Cart */}
+          {currentVariant && currentVariant.stock > 0 ? (
+            <Row className="mt-4 align-items-center">
+              <Col xs={4} md={3}>
+                <Form.Select 
+                  value={qty} 
+                  onChange={(e) => setQty(Number(e.target.value))}
+                  className="py-3 fw-bold text-center"
+                >
+                  {/* Create a dropdown from 1 up to the total stock available (max 10 for UX) */}
+                  {[...Array(Math.min(currentVariant.stock, 10)).keys()].map((x) => (
+                    <option key={x + 1} value={x + 1}>
+                      {x + 1}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col xs={8} md={9}>
+                <Button 
+                  variant="dark" 
+                  size="lg" 
+                  className="w-100 py-3 fw-bold text-uppercase"
+                  onClick={addToCartHandler}
+                >
+                  Add to Cart
+                </Button>
+              </Col>
+            </Row>
+          ) : (
+             <Button 
+               variant="secondary" 
+               size="lg" 
+               className="w-100 py-3 mt-4 fw-bold text-uppercase"
+               disabled
+             >
+               Currently Unavailable
+             </Button>
+          )}
         </Col>
       </Row>
     </Container>

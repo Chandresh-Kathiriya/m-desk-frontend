@@ -18,6 +18,11 @@ export const textSchema = {
       common: {
         brandName: 'MDesk',
         home: 'Home',
+        dashboard: 'Dashboard',
+        products: 'Products',
+        categories: 'Categories',
+        inventory: 'Inventory',
+        masterData: 'Master Data',
         login: 'Login',
         logout: 'Logout',
         footerRights: '© 2026 MDesk E-commerce. All rights reserved.',

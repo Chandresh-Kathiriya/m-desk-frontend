@@ -39,11 +39,12 @@ const Header: React.FC = () => {
             {/* Admin Navigation */}
             {isAdminAuth ? (
               <>
-                <Nav.Link as={Link} to="/admin/dashboard">Dashboard</Nav.Link>
+                <Nav.Link as={Link} to="/admin/dashboard">{text.dashboard}</Nav.Link>
                 <NavDropdown title="Master Data" id="admin-master-data-dropdown">
-                  <NavDropdown.Item as={Link} to="/admin/products">Products</NavDropdown.Item>
-                  <NavDropdown.Item as={Link} to="/admin/categories">Categories</NavDropdown.Item>
-                  <NavDropdown.Item as={Link} to="/admin/inventory">Inventory</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/admin/products">{text.products}</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/admin/categories">{text.categories}</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/admin/inventory">{text.inventory}</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/admin/master-data">{text.masterData}</NavDropdown.Item>
                 </NavDropdown>
                 <span className="text-white mx-3" style={{ fontSize: 'var(--font-sm)' }}>
                   Admin: {adminInfo?.user?.name}
@@ -56,6 +57,7 @@ const Header: React.FC = () => {
               /* User Navigation */
               <>
                 <Nav.Link as={Link} to="/">{text.home}</Nav.Link>
+                <Nav.Link as={Link} to="/cart">{text.cart}</Nav.Link>
                 <span className="text-white mx-3" style={{ fontSize: 'var(--font-sm)' }}>
                   Hello, {userInfo?.user?.name}
                 </span>

@@ -22,6 +22,7 @@ import {
 } from './admin/masterDataReducers';
 import { inventoryListReducer, inventoryUpdateReducer } from './admin/inventoryReducers';
 import { storefrontProductListReducer, storefrontProductDetailsReducer } from './storefront/productReducers';
+import { cartReducer } from './user/cartReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -43,6 +44,7 @@ const rootReducer = combineReducers({
   inventoryUpdate: inventoryUpdateReducer,
   storefrontProductList: storefrontProductListReducer,
   storefrontProductDetails: storefrontProductDetailsReducer,
+  cart: cartReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

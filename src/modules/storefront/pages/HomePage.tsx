@@ -25,9 +25,6 @@ const HomePage: React.FC = () => {
 
   // --- SMART PRICE CALCULATOR (DEBUG MODE) ---
   const getDisplayPrice = (product: any) => {
-    console.log(`\n--- 💰 CALCULATING PRICE FOR: ${product.productName} ---`);
-    console.log(`1. Variants Array Exists?`, !!product.variants);
-    console.log(`2. Full Variants Array:`, product.variants);
 
     if (!product.variants || product.variants.length === 0) {
       console.warn(`❌ ERROR: No variants found for this product! Returning ₹0.00`);
@@ -36,7 +33,6 @@ const HomePage: React.FC = () => {
 
     // Check stock
     const inStockVariants = product.variants.filter((v: any) => v.stock > 0);
-    console.log(`3. Variants with stock > 0:`, inStockVariants.length);
 
     const variantsToCheck = inStockVariants.length > 0 ? inStockVariants : product.variants;
 
@@ -45,32 +41,18 @@ const HomePage: React.FC = () => {
       const price = Number(v.salesPrice);
       const tax = Number(v.salesTax);
       
-      console.log(`   -> SKU: ${v.sku}`);
-      console.log(`      Raw salesPrice:`, v.salesPrice, `(Type: ${typeof v.salesPrice})`);
-      console.log(`      Raw salesTax:`, v.salesTax, `(Type: ${typeof v.salesTax})`);
-      
       const safePrice = price || 0;
       const safeTax = tax || 0;
       const finalMrp = safePrice + (safePrice * (safeTax / 100));
       
-      console.log(`      Calculated Final MRP: ${finalMrp}`);
       return finalMrp;
     }).filter((mrp: number) => mrp > 0);
 
-    console.log(`4. Valid MRPs after filtering zeros:`, mrps);
-
-    if (mrps.length === 0) {
-      console.warn(`❌ ERROR: All price calculations resulted in 0! Returning ₹0.00`);
-      return '₹0.00';
-    }
 
     const minPrice = Math.min(...mrps);
     const maxPrice = Math.max(...mrps);
-    console.log(`5. Min Price: ${minPrice} | Max Price: ${maxPrice}`);
 
     const displayResult = minPrice === maxPrice ? `₹${minPrice.toFixed(2)}` : `From ₹${minPrice.toFixed(2)}`;
-    console.log(`6. Final Display String: ${displayResult}`);
-    console.log(`--- END PRICE CALCULATION ---\n`);
 
     return displayResult;
   };

@@ -9,6 +9,10 @@ import ProductDetailsPage from './modules/storefront/pages/ProductDetailsPage';
 // User Imports
 import UserLogin from './modules/user/pages/UserLogin';
 import UserRegister from './modules/user/pages/UserRegister';
+import CartPage from './modules/user/pages/CartPage';
+import ShippingPage from './modules/user/pages/ShippingPage';
+import PaymentPage from './modules/user/pages/PaymentPage';
+import PlaceOrderPage from './modules/user/pages/PlaceOrderPage';
 
 // Admin Imports
 import AdminLogin from './modules/admin/pages/adminLogin';
@@ -32,6 +36,10 @@ function App() {
           {/* User */}
           <Route path="/login" element={<UserLogin />} />
           <Route path="/register" element={<UserRegister />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout/shipping" element={<ShippingPage />} />
+          <Route path="/checkout/payment" element={<PaymentPage />} />
+          <Route path="/checkout/placeorder" element={<PlaceOrderPage />} />
 
           <Route path="/product/:id" element={<ProductDetailsPage />} />
 
