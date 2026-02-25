@@ -5,18 +5,21 @@ import { listMasterData, createMasterData, updateMasterData, deleteMasterData } 
 import { MASTER_DATA_CREATE_RESET, MASTER_DATA_UPDATE_RESET } from '../../../store/constants/admin/masterDataConstants';
 import { RootState } from '../../../store/reducers';
 
+const emptyRow = { name: '', description: '', hexCode: '#000000', code: '' };
+
 const MasterDataManagement: React.FC = () => {
   const dispatch = useDispatch<any>();
   const [activeTab, setActiveTab] = useState<'brands' | 'colors' | 'sizes' | 'styles' | 'categories' | 'types'>('brands');
   
-  // --- NEW: Edit Tracking State ---
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null); 
-  const [formData, setFormData] = useState({ name: '', description: '', hexCode: '#000000', code: '' });
+  
+  // --- NEW: Array State for Bulk Add ---
+  const [formDataArray, setFormDataArray] = useState([{ ...emptyRow }]);
 
   const masterDataList = useSelector((state: RootState) => state.masterDataList || {} as any);
   const { loading, error } = masterDataList;
-  const currentRecords = masterDataList[activeTab] || []; 
+  const currentRecords = (masterDataList as Record<string, any>)[activeTab] || [];
 
   const masterDataCreate = useSelector((state: RootState) => state.masterDataCreate || {} as any);
   const { loading: createLoading, error: createError, success: createSuccess } = masterDataCreate;
@@ -26,7 +29,7 @@ const MasterDataManagement: React.FC = () => {
 
   useEffect(() => {
     dispatch(listMasterData(activeTab));
-  }, [dispatch, activeTab, createSuccess, updateSuccess]); // Reload when tab changes OR create/update succeeds
+  }, [dispatch, activeTab, createSuccess, updateSuccess]);
 
   useEffect(() => {
     if (createSuccess || updateSuccess) {
@@ -39,24 +42,23 @@ const MasterDataManagement: React.FC = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setFormData({ name: '', description: '', hexCode: '#000000', code: '' });
+    setFormDataArray([{ ...emptyRow }]);
   };
 
   const handleOpenCreate = () => {
     setEditingId(null);
-    setFormData({ name: '', description: '', hexCode: '#000000', code: '' });
+    setFormDataArray([{ ...emptyRow }]);
     setShowModal(true);
   };
 
-  // --- NEW: Populate form for editing ---
   const handleOpenEdit = (record: any) => {
     setEditingId(record._id);
-    setFormData({
+    setFormDataArray([{
       name: record.name || '',
       description: record.description || '',
       hexCode: record.hexCode || '#000000',
       code: record.code || ''
-    });
+    }]);
     setShowModal(true);
   };
 
@@ -66,13 +68,30 @@ const MasterDataManagement: React.FC = () => {
     }
   };
 
-  // --- NEW: Smart Submit (Handles both Create & Update) ---
+  // --- NEW: Dynamic Row Handlers ---
+  const handleRowChange = (index: number, field: string, value: string) => {
+    const updated = [...formDataArray];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormDataArray(updated);
+  };
+
+  const handleAddRow = () => {
+    setFormDataArray([...formDataArray, { ...emptyRow }]);
+  };
+
+  const handleRemoveRow = (index: number) => {
+    const updated = formDataArray.filter((_, i) => i !== index);
+    setFormDataArray(updated);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      dispatch(updateMasterData(activeTab, editingId, formData));
+      // Editing sends a single object
+      dispatch(updateMasterData(activeTab, editingId, formDataArray[0]));
     } else {
-      dispatch(createMasterData(activeTab, formData));
+      // Creating sends the whole array (Bulk Add)
+      dispatch(createMasterData(activeTab, formDataArray));
     }
   };
 
@@ -88,7 +107,7 @@ const MasterDataManagement: React.FC = () => {
               <ListGroup.Item action active={activeTab === 'sizes'} onClick={() => setActiveTab('sizes')}>Sizes</ListGroup.Item>
               <ListGroup.Item action active={activeTab === 'styles'} onClick={() => setActiveTab('styles')}>Styles</ListGroup.Item>
               <ListGroup.Item action active={activeTab === 'categories'} onClick={() => setActiveTab('categories')}>Categories</ListGroup.Item>
-<ListGroup.Item action active={activeTab === 'types'} onClick={() => setActiveTab('types')}>Product Types</ListGroup.Item>
+              <ListGroup.Item action active={activeTab === 'types'} onClick={() => setActiveTab('types')}>Product Types</ListGroup.Item>
             </ListGroup>
           </Card>
         </Col>
@@ -103,20 +122,17 @@ const MasterDataManagement: React.FC = () => {
                 </Button>
               </div>
 
-              {loading && <Spinner animation="border" className="d-block mx-auto" />}
-              {error && <Alert variant="danger">{error}</Alert>}
-
-              {!loading && !error && (
+              {loading ? <Spinner animation="border" className="d-block mx-auto" /> : error ? <Alert variant="danger">{error}</Alert> : (
                 <Table responsive hover className="align-middle">
                   <thead className="table-light">
-  <tr>
-    <th>Name</th>
-    {(activeTab === 'brands' || activeTab === 'categories') && <th>Description</th>}
-    {activeTab === 'colors' && <th>Color Swatch</th>}
-    {activeTab === 'sizes' && <th>Size Code</th>}
-    <th className="text-end">Actions</th>
-  </tr>
-</thead>
+                    <tr>
+                      <th>Name</th>
+                      {(activeTab === 'brands' || activeTab === 'categories') && <th>Description</th>}
+                      {activeTab === 'colors' && <th>Color Swatch</th>}
+                      {activeTab === 'sizes' && <th>Size Code</th>}
+                      <th className="text-end">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {currentRecords.map((record: any) => (
                       <tr key={record._id}>
@@ -131,21 +147,13 @@ const MasterDataManagement: React.FC = () => {
                           </td>
                         )}
                         {activeTab === 'sizes' && <td><Badge bg="secondary">{record.code}</Badge></td>}
-
                         <td className="text-end">
-                          {/* --- NEW: Edit Button --- */}
-                          <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleOpenEdit(record)}>
-                            Edit
-                          </Button>
-                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(record._id)}>
-                            Delete
-                          </Button>
+                          <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleOpenEdit(record)}>Edit</Button>
+                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(record._id)}>Delete</Button>
                         </td>
                       </tr>
                     ))}
-                    {currentRecords.length === 0 && (
-                      <tr><td colSpan={4} className="text-center text-muted py-4">No records found.</td></tr>
-                    )}
+                    {currentRecords.length === 0 && <tr><td colSpan={5} className="text-center py-4">No records found.</td></tr>}
                   </tbody>
                 </Table>
               )}
@@ -154,50 +162,79 @@ const MasterDataManagement: React.FC = () => {
         </Col>
       </Row>
 
-      <Modal show={showModal} onHide={handleCloseModal} centered>
+      {/* --- NEW BULK ADD MODAL --- */}
+      <Modal show={showModal} onHide={handleCloseModal} centered size={editingId ? 'sm' : 'lg'}>
         <Modal.Header closeButton>
           <Modal.Title className="text-capitalize">
-            {editingId ? 'Edit' : 'Add New'} {activeTab.slice(0, -1)}
+            {editingId ? 'Edit' : 'Bulk Add'} {activeTab}
           </Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
-          <Modal.Body>
+          <Modal.Body className="bg-light">
             {(createError || updateError) && <Alert variant="danger">{createError || updateError}</Alert>}
 
-            <Form.Group className="mb-3">
-              <Form.Label>Name</Form.Label>
-              <Form.Control type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-            </Form.Group>
+            {formDataArray.map((row, index) => (
+              <Card key={index} className="mb-3 shadow-sm border-0 relative">
+                <Card.Body>
+                  {/* Remove Row Button (Only show if creating and multiple rows exist) */}
+                  {!editingId && formDataArray.length > 1 && (
+                    <Button variant="link" className="text-danger position-absolute top-0 end-0 text-decoration-none" onClick={() => handleRemoveRow(index)}>
+                      &times; Remove
+                    </Button>
+                  )}
 
-            {(activeTab === 'brands' || activeTab === 'categories') && (
-  <Form.Group className="mb-3">
-    <Form.Label>Description</Form.Label>
-    <Form.Control as="textarea" rows={2} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-  </Form.Group>
-)}
+                  <Row>
+                    <Col md={(activeTab === 'colors' || activeTab === 'sizes') ? 6 : 12}>
+                      <Form.Group className="mb-3">
+                        <Form.Label className="fw-bold text-muted small text-uppercase">Name</Form.Label>
+                        <Form.Control type="text" required value={row.name} onChange={(e) => handleRowChange(index, 'name', e.target.value)} />
+                      </Form.Group>
+                    </Col>
 
-            {activeTab === 'sizes' && (
-              <Form.Group className="mb-3">
-                <Form.Label>Size Code</Form.Label>
-                <Form.Control type="text" required value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} />
-              </Form.Group>
+                    {(activeTab === 'brands' || activeTab === 'categories') && (
+                      <Col md={12}>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-bold text-muted small text-uppercase">Description</Form.Label>
+                          <Form.Control as="textarea" rows={2} value={row.description} onChange={(e) => handleRowChange(index, 'description', e.target.value)} />
+                        </Form.Group>
+                      </Col>
+                    )}
+
+                    {activeTab === 'sizes' && (
+                      <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-bold text-muted small text-uppercase">Size Code</Form.Label>
+                          <Form.Control type="text" required value={row.code} onChange={(e) => handleRowChange(index, 'code', e.target.value)} />
+                        </Form.Group>
+                      </Col>
+                    )}
+
+                    {activeTab === 'colors' && (
+                      <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label className="fw-bold text-muted small text-uppercase">Hex Code</Form.Label>
+                          <div className="d-flex align-items-center gap-3">
+                            <Form.Control type="color" required value={row.hexCode} onChange={(e) => handleRowChange(index, 'hexCode', e.target.value)} style={{ width: '40px', height: '38px', padding: '0' }}/>
+                            <Form.Control type="text" required value={row.hexCode} onChange={(e) => handleRowChange(index, 'hexCode', e.target.value)} />
+                          </div>
+                        </Form.Group>
+                      </Col>
+                    )}
+                  </Row>
+                </Card.Body>
+              </Card>
+            ))}
+
+            {!editingId && (
+              <Button variant="outline-primary" size="sm" onClick={handleAddRow} className="fw-bold">
+                + Add Another Row
+              </Button>
             )}
-
-            {activeTab === 'colors' && (
-              <Form.Group className="mb-3">
-                <Form.Label>Hex Code</Form.Label>
-                <div className="d-flex align-items-center gap-3">
-                  <Form.Control type="color" required value={formData.hexCode} onChange={(e) => setFormData({ ...formData, hexCode: e.target.value })} style={{ width: '50px', height: '40px', padding: '0' }}/>
-                  <Form.Control type="text" required value={formData.hexCode} onChange={(e) => setFormData({ ...formData, hexCode: e.target.value })} />
-                </div>
-              </Form.Group>
-            )}
-
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={handleCloseModal}>Cancel</Button>
             <Button variant="primary" type="submit" disabled={createLoading || updateLoading}>
-              {createLoading || updateLoading ? <Spinner size="sm" animation="border" /> : (editingId ? 'Update Record' : 'Save Record')}
+              {createLoading || updateLoading ? <Spinner size="sm" animation="border" /> : (editingId ? 'Update Record' : `Save ${formDataArray.length} Record(s)`)}
             </Button>
           </Modal.Footer>
         </Form>

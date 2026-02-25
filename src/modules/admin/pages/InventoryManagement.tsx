@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Card, Table, Badge, Button, Spinner, Alert, Modal, Form, InputGroup } from 'react-bootstrap';
+import { Container, Card, Table, Badge, Button, Spinner, Alert, Modal, Form } from 'react-bootstrap';
 import { listInventory, adjustStock } from '../../../store/actions/admin/inventoryActions';
 import { INVENTORY_UPDATE_RESET } from '../../../store/actions/admin/inventoryActions'; // Adjust path if needed
 import { RootState } from '../../../store/reducers';
@@ -47,11 +47,12 @@ const [notes, setNotes] = useState('');
     dispatch(adjustStock(selectedSku.sku, Number(adjustmentQty), reason, notes));
   };
 
-  // Filter for searching SKUs or product names
-  const filteredInventory = inventory?.filter((item: any) => 
-    item.sku.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.productName.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const safeInventory = (inventory as any[]) || [];
+  
+  const filteredInventory = safeInventory.filter((item: any) => 
+    item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Container className="py-4">

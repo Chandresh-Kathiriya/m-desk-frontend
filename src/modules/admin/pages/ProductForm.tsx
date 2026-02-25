@@ -1,19 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Badge, Image, ListGroup, Table } from 'react-bootstrap';
+import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Badge, Image, Table, Modal } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { listProductDetails, createProduct, updateProduct } from '../../../store/actions/admin/productActions';
 import { listMasterData } from '../../../store/actions/admin/masterDataActions';
 import { RootState } from '../../../store/reducers';
-import { textSchema } from '../../../schemas/text/schema';
 import { PRODUCT_CREATE_RESET, PRODUCT_UPDATE_RESET } from '../../../store/constants/admin/productConstants';
+import { adjustStock } from '../../../store/actions/admin/inventoryActions';
 
 const ProductForm: React.FC = () => {
-  const { id } = useParams(); 
+  const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch<any>();
-  const text = textSchema.en.adminProducts;
   const isEditing = Boolean(id);
 
   const adminAuth = useSelector((state: RootState) => state.adminAuth);
@@ -21,18 +20,25 @@ const ProductForm: React.FC = () => {
 
   // --- MASTER DATA FROM REDUX ---
   const masterDataList = useSelector((state: RootState) => state.masterDataList || {} as any);
-  const { brands = [], styles = [], colors = [], sizes = [], categories = [], types = [] } = masterDataList;
+  const { 
+    brands = [] as any[], 
+    styles = [] as any[], 
+    colors = [] as any[], 
+    sizes = [] as any[], 
+    categories = [] as any[], 
+    types = [] as any[] 
+  } = masterDataList as any;
 
   const [formData, setFormData] = useState({
     productName: '',
-    productCategory: '', 
+    productCategory: '',
     brand: '',
     style: '',
-    productType: '', 
-    material: '',    
-    colors: [] as string[], 
-    sizes: [] as string[],  
-    variants: [] as any[], 
+    productType: '',
+    material: '',
+    colors: [] as string[],
+    sizes: [] as string[],
+    variants: [] as any[],
     // REMOVED salesPrice, salesTax, purchasePrice, purchaseTax from here!
     published: false,
     images: [] as { url: string, color: string }[],
@@ -40,10 +46,17 @@ const ProductForm: React.FC = () => {
 
   const [uploading, setUploading] = useState(false);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
-  const [imgColor, setImgColor] = useState(''); 
+  const [imgColor, setImgColor] = useState('');
   const [imgView, setImgView] = useState('front');
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [activeStockIndex, setActiveStockIndex] = useState<number | null>(null);
+  const [adjQty, setAdjQty] = useState<number | string>('');
+  const [stockReason, setStockReason] = useState('New Purchase Order');
+  const [stockNotes, setStockNotes] = useState('');
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inventoryUpdate = useSelector((state: RootState) => state.inventoryUpdate || {} as any);
+  const { loading: updateLoading } = inventoryUpdate;
+
 
   const productDetails = useSelector((state: RootState) => state.productDetails);
   const { loading: loadingDetails, error: errorDetails, product } = productDetails;
@@ -59,7 +72,7 @@ const ProductForm: React.FC = () => {
     dispatch(listMasterData('styles'));
     dispatch(listMasterData('colors'));
     dispatch(listMasterData('sizes'));
-    dispatch(listMasterData('categories')); 
+    dispatch(listMasterData('categories'));
     dispatch(listMasterData('types'));
   }, [dispatch, adminInfo, navigate]);
 
@@ -74,18 +87,14 @@ const ProductForm: React.FC = () => {
       } else {
         setFormData({
           productName: product.productName,
-          productCategory: product.productCategory?._id || product.productCategory || '', 
+          productCategory: product.productCategory?._id || product.productCategory || '',
           brand: product.brand?._id || product.brand || '',
           style: product.style?._id || product.style || '',
           productType: product.productType || '',
           material: product.material || '',
-          colors: product.colors?.map((c: any) => c._id || c) || [], 
-          sizes: product.sizes?.map((s: any) => s._id || s) || [], 
+          colors: product.colors?.map((c: any) => c._id || c) || [],
+          sizes: product.sizes?.map((s: any) => s._id || s) || [],
           variants: product.variants || [],
-          salesPrice: product.salesPrice,
-          salesTax: product.salesTax,
-          purchasePrice: product.purchasePrice,
-          purchaseTax: product.purchaseTax,
           published: product.published,
           images: product.images || [],
         });
@@ -119,9 +128,6 @@ const ProductForm: React.FC = () => {
     if (formData.colors.length === 0 || formData.sizes.length === 0) {
       return alert('Please select at least one Color and Size.');
     }
-    if (formData.salesPrice <= 0) {
-      return alert('Please set your Default Sales Price and Tax at the bottom of the form before generating SKUs.');
-    }
 
     // 2. Look up the names from the Master Data arrays using the saved IDs
     const selectedBrand = brands.find((b: any) => b._id === formData.brand)?.name || 'BRN';
@@ -145,16 +151,16 @@ const ProductForm: React.FC = () => {
         const colorPfx = colorObj.name.substring(0, 3).toUpperCase();
         const sizePfx = sizeObj.code.toUpperCase();
         const sku = `${brandPfx}-${catPfx}-${typePfx}-${stylePfx}-${colorPfx}-${sizePfx}-${Math.floor(100 + Math.random() * 900)}`;
-        
-        generatedVariants.push({ 
-          sku, 
-          color: colorObj.name, 
-          size: sizeObj.code, 
+
+        generatedVariants.push({
+          sku,
+          color: colorObj.name,
+          size: sizeObj.code,
           stock: 0,
-          salesPrice: 0,    
-          salesTax: 0,      
-          purchasePrice: 0, 
-          purchaseTax: 0    
+          salesPrice: 0,
+          salesTax: 0,
+          purchasePrice: 0,
+          purchaseTax: 0
         });
       });
     });
@@ -172,7 +178,7 @@ const ProductForm: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     setPendingImage(file);
-    setImgColor(''); 
+    setImgColor('');
     setImgView('front');
   };
 
@@ -182,14 +188,14 @@ const ProductForm: React.FC = () => {
     const uploadData = new FormData();
     uploadData.append('fileName', finalSpecName);
     uploadData.append('image', pendingImage);
-    
+
     setUploading(true);
     try {
       const config = { headers: { Authorization: `Bearer ${adminInfo.token}` } };
       const { data } = await axios.post('/api/upload', uploadData, config);
       setFormData({ ...formData, images: [...formData.images, { url: data.imageUrl, color: imgColor.toLowerCase() }] });
       setUploading(false);
-      setPendingImage(null); 
+      setPendingImage(null);
     } catch (error: any) {
       setUploading(false);
       alert('Upload failed.');
@@ -204,6 +210,43 @@ const ProductForm: React.FC = () => {
     else dispatch(createProduct(formData));
   };
 
+  const handleOpenStockModal = (index: number) => {
+    setActiveStockIndex(index);
+    setAdjQty('');
+    // Default reason changes based on if we are creating vs editing
+    setStockReason(id ? 'Inventory Correction' : 'Initial Stock Setup');
+    setStockNotes('');
+    setShowStockModal(true);
+  };
+
+  const handleStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (activeStockIndex === null) return;
+
+    const variant = formData.variants[activeStockIndex];
+    const qty = Number(adjQty);
+
+    if (id) {
+      // --- EDIT MODE: Dispatch API call to log real ledger transaction ---
+      // Make sure you have dispatch imported: const dispatch = useDispatch<any>();
+      await dispatch(adjustStock(variant.sku, qty, stockReason, stockNotes));
+
+      // Optimistically update the UI table so they see the new stock instantly
+      const updatedVariants = [...formData.variants];
+      updatedVariants[activeStockIndex].stock += qty;
+      setFormData({ ...formData, variants: updatedVariants });
+      setShowStockModal(false);
+    } else {
+      // --- CREATE MODE: Save to local state for when they click "Save Product" ---
+      const updatedVariants = [...formData.variants];
+      updatedVariants[activeStockIndex].stock = qty; // Absolute number for initial setup
+      updatedVariants[activeStockIndex].stockReason = stockReason;
+      updatedVariants[activeStockIndex].stockNotes = stockNotes;
+      setFormData({ ...formData, variants: updatedVariants });
+      setShowStockModal(false);
+    }
+  };
+
   const activeColorNames = colors.filter((c: any) => formData.colors.includes(c._id)).map((c: any) => c.name);
 
   return (
@@ -211,10 +254,12 @@ const ProductForm: React.FC = () => {
       <Card className="shadow-sm mx-auto" style={{ maxWidth: '900px', borderTop: '4px solid var(--primary-color)' }}>
         <Card.Body>
           <h3 className="mb-4">{isEditing ? 'Edit Product' : 'Add New Product'}</h3>
-          
+
           {loadingDetails && <Spinner animation="border" className="d-block mx-auto mb-3" />}
           {errorDetails && <Alert variant="danger">{errorDetails}</Alert>}
-          
+          {errorCreate && <Alert variant="danger">{errorCreate}</Alert>}
+          {errorUpdate && <Alert variant="danger">{errorUpdate}</Alert>}
+
           <Form onSubmit={submitHandler}>
             <Form.Group className="mb-3">
               <Form.Label>Product Name</Form.Label>
@@ -273,7 +318,7 @@ const ProductForm: React.FC = () => {
                   <Form.Label className="small fw-bold">Available Colors</Form.Label>
                   <div className="d-flex flex-wrap gap-2 p-2 border bg-white rounded" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                     {colors.map((c: any) => (
-                      <Form.Check 
+                      <Form.Check
                         key={c._id} type="checkbox" id={`color-${c._id}`} label={c.name}
                         checked={formData.colors.includes(c._id)}
                         onChange={() => handleArrayChange('colors', c._id)}
@@ -285,7 +330,7 @@ const ProductForm: React.FC = () => {
                   <Form.Label className="small fw-bold">Available Sizes</Form.Label>
                   <div className="d-flex flex-wrap gap-3 p-2 border bg-white rounded" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                     {sizes.map((s: any) => (
-                      <Form.Check 
+                      <Form.Check
                         key={s._id} type="checkbox" id={`size-${s._id}`} label={s.code}
                         checked={formData.sizes.includes(s._id)}
                         onChange={() => handleArrayChange('sizes', s._id)}
@@ -299,60 +344,74 @@ const ProductForm: React.FC = () => {
               </Row>
 
               {formData.variants.length > 0 && (
-  <div className="mt-3 bg-white border rounded">
-    <Table size="sm" bordered hover responsive className="mb-0 text-center align-middle" style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-      <thead className="table-dark">
-        <tr>
-          <th>SKU</th>
-          <th>Color</th>
-          <th>Size</th>
-          <th style={{ minWidth: '100px' }}>Sales Price</th>
-          <th style={{ minWidth: '80px' }}>Sales Tax(%)</th>
-          <th className="bg-primary text-white">Final MRP</th>
-          <th style={{ minWidth: '100px' }}>Purch. Price</th>
-          <th style={{ minWidth: '80px' }}>Purch. Tax(%)</th>
-          <th>Stock</th>
-        </tr>
-      </thead>
-      <tbody>
-        {formData.variants.map((v, i) => {
-          // Safe Math Calculation to prevent NaN
-          const sPrice = Number(v.salesPrice) || 0;
-          const sTax = Number(v.salesTax) || 0;
-          const finalMrp = sPrice + (sPrice * (sTax / 100));
+                <div className="mt-3 bg-white border rounded">
+                  <Table size="sm" bordered hover responsive className="mb-0 text-center align-middle" style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                    <thead className="table-dark">
+                      <tr>
+                        <th>SKU</th>
+                        <th>Color</th>
+                        <th>Size</th>
+                        <th style={{ minWidth: '100px' }}>Sales Price</th>
+                        <th style={{ minWidth: '80px' }}>Sales Tax(%)</th>
+                        <th className="bg-primary text-white">Final MRP</th>
+                        <th style={{ minWidth: '100px' }}>Purch. Price</th>
+                        <th style={{ minWidth: '80px' }}>Purch. Tax(%)</th>
+                        <th>Stock</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.variants.map((v, i) => {
+                        // Safe Math Calculation to prevent NaN
+                        const sPrice = Number(v.salesPrice) || 0;
+                        const sTax = Number(v.salesTax) || 0;
+                        const finalMrp = sPrice + (sPrice * (sTax / 100));
 
-          return (
-            <tr key={i}>
-              <td className="font-monospace fw-bold">{v.sku}</td>
-              <td className="text-capitalize">{v.color}</td>
-              <td className="text-uppercase">{v.size}</td>
-              
-              <td>
-                <Form.Control type="number" size="sm" value={v.salesPrice} onChange={(e) => handleVariantFieldChange(i, 'salesPrice', e.target.value)} min="0" />
-              </td>
-              <td>
-                <Form.Control type="number" size="sm" value={v.salesTax} onChange={(e) => handleVariantFieldChange(i, 'salesTax', e.target.value)} min="0" />
-              </td>
-              
-              <td className="fw-bold text-success fs-6">
-                ₹{finalMrp.toFixed(2)}
-              </td>
-              
-              <td>
-                <Form.Control type="number" size="sm" value={v.purchasePrice} onChange={(e) => handleVariantFieldChange(i, 'purchasePrice', e.target.value)} min="0" />
-              </td>
-              <td>
-                <Form.Control type="number" size="sm" value={v.purchaseTax} onChange={(e) => handleVariantFieldChange(i, 'purchaseTax', e.target.value)} min="0" />
-              </td>
-              
-              <td><Badge bg={v.stock > 0 ? 'success' : 'secondary'}>{v.stock}</Badge></td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </Table>
-  </div>
-)}
+                        return (
+                          <tr key={i}>
+                            <td className="font-monospace fw-bold">{v.sku}</td>
+                            <td className="text-capitalize">{v.color}</td>
+                            <td className="text-uppercase">{v.size}</td>
+
+                            <td>
+                              <Form.Control type="number" size="sm" value={v.salesPrice} onChange={(e) => handleVariantFieldChange(i, 'salesPrice', e.target.value)} min="0" />
+                            </td>
+                            <td>
+                              <Form.Control type="number" size="sm" value={v.salesTax} onChange={(e) => handleVariantFieldChange(i, 'salesTax', e.target.value)} min="0" />
+                            </td>
+
+                            <td className="fw-bold text-success fs-6">
+                              ₹{finalMrp.toFixed(2)}
+                            </td>
+
+                            <td>
+                              <Form.Control type="number" size="sm" value={v.purchasePrice} onChange={(e) => handleVariantFieldChange(i, 'purchasePrice', e.target.value)} min="0" />
+                            </td>
+                            <td>
+                              <Form.Control type="number" size="sm" value={v.purchaseTax} onChange={(e) => handleVariantFieldChange(i, 'purchaseTax', e.target.value)} min="0" />
+                            </td>
+
+                            <td className="align-middle">
+                              <div className="d-flex flex-column align-items-center">
+                                <Badge bg={v.stock > 0 ? 'success' : 'secondary'} className="mb-1 fs-6">
+                                  {v.stock}
+                                </Badge>
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="p-0 text-decoration-none"
+                                  onClick={() => handleOpenStockModal(i)}
+                                >
+                                  {id ? 'Adjust Stock' : 'Set Initial Stock'}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </Table>
+                </div>
+              )}
             </div>
 
             {/* --- STEP 2: IMAGE UPLOAD --- */}
@@ -420,7 +479,71 @@ const ProductForm: React.FC = () => {
           </Form>
         </Card.Body>
       </Card>
+      {/* --- UNIFIED STOCK ADJUSTMENT MODAL --- */ }
+    <Modal show={showStockModal} onHide={() => setShowStockModal(false)} centered>
+      <Modal.Header closeButton>
+        <Modal.Title>{id ? 'Adjust Inventory' : 'Set Initial Opening Balance'}</Modal.Title>
+      </Modal.Header>
+      <Form onSubmit={handleStockSubmit}>
+        <Modal.Body>
+          {activeStockIndex !== null && (
+            <div className="mb-4 p-3 bg-light rounded border">
+              <h6 className="fw-bold">{formData.productName || 'New Product'}</h6>
+              <div className="text-muted font-monospace mb-2">{formData.variants[activeStockIndex].sku}</div>
+              <Badge bg="dark" className="me-2 text-uppercase">{formData.variants[activeStockIndex].size}</Badge>
+              <Badge bg="secondary" className="text-capitalize">{formData.variants[activeStockIndex].color}</Badge>
+              {id && (
+                <div className="mt-2">Current Stock: <strong>{formData.variants[activeStockIndex].stock}</strong></div>
+              )}
+            </div>
+          )}
+
+          <Form.Group className="mb-3">
+            <Form.Label>
+              {id ? 'Units to Add/Remove (Use negative for removal)' : 'Total Initial Units (Opening Balance)'}
+            </Form.Label>
+            <Form.Control
+              type="number"
+              required
+              placeholder={id ? "e.g., 50 or -5" : "e.g., 100"}
+              value={adjQty}
+              onChange={(e) => setAdjQty(e.target.value)}
+              min={id ? undefined : "0"} // Only allow negative in edit mode
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Reason</Form.Label>
+            <Form.Select required value={stockReason} onChange={(e) => setStockReason(e.target.value)}>
+              {!id && <option value="Initial Stock Setup">Initial Stock Setup</option>}
+              <option value="New Purchase Order">New Purchase Order (Stock In)</option>
+              <option value="Customer Return">Customer Return (Stock In)</option>
+              <option value="Damaged/Defective">Damaged / Defective (Stock Out)</option>
+              <option value="Lost in Transit">Lost in Transit (Stock Out)</option>
+              <option value="Inventory Correction">Inventory Correction</option>
+              <option value="Other">Other</option>
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-4">
+            <Form.Label>Additional Notes (Optional)</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={2}
+              placeholder="e.g., PO# 12345"
+              value={stockNotes}
+              onChange={(e) => setStockNotes(e.target.value)}
+            />
+          </Form.Group>
+
+          <Button variant="primary" className="w-100" type="submit" disabled={updateLoading}>
+            {updateLoading ? <Spinner size="sm" animation="border" /> : 'Confirm Stock'}
+          </Button>
+        </Modal.Body>
+      </Form>
+    </Modal>
     </Container>
+
   );
 };
 

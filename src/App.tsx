@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './common/components/Layout';
 import HomePage from './modules/storefront/pages/HomePage';
 
+import ProductDetailsPage from './modules/storefront/pages/ProductDetailsPage';
+
 // User Imports
 import UserLogin from './modules/user/pages/UserLogin';
 import UserRegister from './modules/user/pages/UserRegister';
@@ -30,6 +32,8 @@ function App() {
           {/* User */}
           <Route path="/login" element={<UserLogin />} />
           <Route path="/register" element={<UserRegister />} />
+
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
 
           {/* admin routes */}
           <Route path="/admin/login" element={<AdminLogin />} />

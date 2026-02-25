@@ -23,3 +23,22 @@ export const listStorefrontProducts = () => async (dispatch: any) => {
     });
   }
 };
+
+export const getStorefrontProductDetails = (id: string) => async (dispatch: any) => {
+  try {
+    dispatch({ type: 'STOREFRONT_PRODUCT_DETAILS_REQUEST' });
+
+    // Assuming your public route looks something like this based on your controller
+    const { data } = await axios.get(`/api/products/public/${id}`);
+
+    dispatch({
+      type: 'STOREFRONT_PRODUCT_DETAILS_SUCCESS',
+      payload: data.product,
+    });
+  } catch (error: any) {
+    dispatch({
+      type: 'STOREFRONT_PRODUCT_DETAILS_FAIL',
+      payload: error.response && error.response.data.message ? error.response.data.message : error.message,
+    });
+  }
+};
