@@ -55,9 +55,6 @@ export const addToCart = (product: any, variant: any, qty: number) => async (dis
       maxStock: variant.stock,
     };
 
-    // --- FRONTEND DEBUG LOG ---
-    console.log("🚀 FRONTEND SENDING TO BACKEND:", cartItemData);
-
     const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
     const { data } = await axios.post('/api/cart', cartItemData, config);
 
@@ -132,4 +129,23 @@ export const saveShippingAddress = (data: { address: string; city: string; posta
 
   // Save to local storage so they don't have to re-type it if they close the browser
   localStorage.setItem('shippingAddress', JSON.stringify(data));
+};
+
+export const clearUserCart = () => async (dispatch: any, getState: any) => {
+  try {
+      const state = getState();
+      const userInfo = state.userAuth?.userInfo;
+      
+      if (!userInfo || !userInfo.token) return;
+
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      
+      // Clear cart in the backend database
+      await axios.delete('/api/cart', config);
+
+      // Clear cart in the Redux state (matches your existing CART_CLEAR case)
+      dispatch({ type: 'CART_CLEAR' });
+  } catch (error: any) {
+      console.error("Failed to clear cart", error);
+  }
 };

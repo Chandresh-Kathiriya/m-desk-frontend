@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Badge, Image, Table, Modal } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
 import { listProductDetails, createProduct, updateProduct } from '../../../store/actions/admin/productActions';
 import { listMasterData } from '../../../store/actions/admin/masterDataActions';
 import { RootState } from '../../../store/reducers';
 import { PRODUCT_CREATE_RESET, PRODUCT_UPDATE_RESET } from '../../../store/constants/admin/productConstants';
 import { adjustStock } from '../../../store/actions/admin/inventoryActions';
+import { uploadImage } from '../../../store/actions/admin/uploadActions';
+import { UPLOAD_IMAGE_RESET } from '../../../store/constants/admin/uploadConstants';
 
 const ProductForm: React.FC = () => {
   const { id } = useParams();
@@ -39,12 +40,10 @@ const ProductForm: React.FC = () => {
     colors: [] as string[],
     sizes: [] as string[],
     variants: [] as any[],
-    // REMOVED salesPrice, salesTax, purchasePrice, purchaseTax from here!
     published: false,
     images: [] as { url: string, color: string }[],
   });
 
-  const [uploading, setUploading] = useState(false);
   const [pendingImage, setPendingImage] = useState<File | null>(null);
   const [imgColor, setImgColor] = useState('');
   const [imgView, setImgView] = useState('front');
@@ -54,16 +53,21 @@ const ProductForm: React.FC = () => {
   const [stockReason, setStockReason] = useState('New Purchase Order');
   const [stockNotes, setStockNotes] = useState('');
 
+  // Redux States
   const inventoryUpdate = useSelector((state: RootState) => state.inventoryUpdate || {} as any);
   const { loading: updateLoading } = inventoryUpdate;
 
-
   const productDetails = useSelector((state: RootState) => state.productDetails);
   const { loading: loadingDetails, error: errorDetails, product } = productDetails;
+  
   const productCreate = useSelector((state: RootState) => state.productCreate);
   const { loading: loadingCreate, error: errorCreate, success: successCreate } = productCreate;
+  
   const productUpdate = useSelector((state: RootState) => state.productUpdate);
   const { loading: loadingUpdate, error: errorUpdate, success: successUpdate } = productUpdate;
+
+  const imageUpload = useSelector((state: RootState) => state.imageUpload || {} as any);
+  const { loading: uploading, success: uploadSuccess, imageUrl, error: uploadError } = imageUpload;
 
   // Initial Data Fetch
   useEffect(() => {
@@ -102,6 +106,22 @@ const ProductForm: React.FC = () => {
     }
   }, [dispatch, navigate, id, isEditing, product, successCreate, successUpdate]);
 
+  // Handle Image Upload Success & Errors
+  useEffect(() => {
+    if (uploadSuccess && imageUrl) {
+      setFormData(prev => ({ 
+        ...prev, 
+        images: [...prev.images, { url: imageUrl, color: imgColor.toLowerCase() }] 
+      }));
+      setPendingImage(null);
+      dispatch({ type: UPLOAD_IMAGE_RESET });
+    }
+    if (uploadError) {
+      alert(`Upload failed: ${uploadError}`);
+      dispatch({ type: UPLOAD_IMAGE_RESET });
+    }
+  }, [uploadSuccess, uploadError, imageUrl, imgColor, dispatch]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
@@ -119,9 +139,7 @@ const ProductForm: React.FC = () => {
     }
   };
 
-  // --- UPGRADED MASTER SKU GENERATOR ---
   const generateVariants = () => {
-    // 1. Strict Validation: Ensure ALL master data is selected first!
     if (!formData.brand || !formData.productType || !formData.style || !formData.productCategory) {
       return alert('Please select a Brand, Type, Style, and Category before generating SKUs.');
     }
@@ -129,13 +147,11 @@ const ProductForm: React.FC = () => {
       return alert('Please select at least one Color and Size.');
     }
 
-    // 2. Look up the names from the Master Data arrays using the saved IDs
     const selectedBrand = brands.find((b: any) => b._id === formData.brand)?.name || 'BRN';
     const selectedCategory = categories.find((c: any) => c._id === formData.productCategory)?.name || 'CAT';
     const selectedStyle = styles.find((s: any) => s._id === formData.style)?.name || 'STL';
-    const selectedType = formData.productType; // Type is already saved as a name string
+    const selectedType = formData.productType; 
 
-    // 3. Create 3-letter Uppercase Prefixes
     const brandPfx = selectedBrand.substring(0, 3).toUpperCase();
     const catPfx = selectedCategory.substring(0, 3).toUpperCase();
     const typePfx = selectedType.substring(0, 3).toUpperCase();
@@ -145,7 +161,6 @@ const ProductForm: React.FC = () => {
     const selectedSizes = sizes.filter((s: any) => formData.sizes.includes(s._id));
     const generatedVariants: any[] = [];
 
-    // 4. Matrix Generation
     selectedColors.forEach((colorObj: any) => {
       selectedSizes.forEach((sizeObj: any) => {
         const colorPfx = colorObj.name.substring(0, 3).toUpperCase();
@@ -182,24 +197,15 @@ const ProductForm: React.FC = () => {
     setImgView('front');
   };
 
-  const confirmUpload = async () => {
+  const confirmUpload = () => {
     if (!pendingImage || !imgColor) return alert('Select image and color.');
     const finalSpecName = `${imgColor}_${imgView}_${Date.now()}`.toLowerCase();
+    
     const uploadData = new FormData();
     uploadData.append('fileName', finalSpecName);
     uploadData.append('image', pendingImage);
 
-    setUploading(true);
-    try {
-      const config = { headers: { Authorization: `Bearer ${adminInfo.token}` } };
-      const { data } = await axios.post('/api/upload', uploadData, config);
-      setFormData({ ...formData, images: [...formData.images, { url: data.imageUrl, color: imgColor.toLowerCase() }] });
-      setUploading(false);
-      setPendingImage(null);
-    } catch (error: any) {
-      setUploading(false);
-      alert('Upload failed.');
-    }
+    dispatch(uploadImage(uploadData));
   };
 
   const submitHandler = (e: React.FormEvent) => {
@@ -213,7 +219,6 @@ const ProductForm: React.FC = () => {
   const handleOpenStockModal = (index: number) => {
     setActiveStockIndex(index);
     setAdjQty('');
-    // Default reason changes based on if we are creating vs editing
     setStockReason(id ? 'Inventory Correction' : 'Initial Stock Setup');
     setStockNotes('');
     setShowStockModal(true);
@@ -227,19 +232,14 @@ const ProductForm: React.FC = () => {
     const qty = Number(adjQty);
 
     if (id) {
-      // --- EDIT MODE: Dispatch API call to log real ledger transaction ---
-      // Make sure you have dispatch imported: const dispatch = useDispatch<any>();
       await dispatch(adjustStock(variant.sku, qty, stockReason, stockNotes));
-
-      // Optimistically update the UI table so they see the new stock instantly
       const updatedVariants = [...formData.variants];
       updatedVariants[activeStockIndex].stock += qty;
       setFormData({ ...formData, variants: updatedVariants });
       setShowStockModal(false);
     } else {
-      // --- CREATE MODE: Save to local state for when they click "Save Product" ---
       const updatedVariants = [...formData.variants];
-      updatedVariants[activeStockIndex].stock = qty; // Absolute number for initial setup
+      updatedVariants[activeStockIndex].stock = qty; 
       updatedVariants[activeStockIndex].stockReason = stockReason;
       updatedVariants[activeStockIndex].stockNotes = stockNotes;
       setFormData({ ...formData, variants: updatedVariants });
@@ -361,7 +361,6 @@ const ProductForm: React.FC = () => {
                     </thead>
                     <tbody>
                       {formData.variants.map((v, i) => {
-                        // Safe Math Calculation to prevent NaN
                         const sPrice = Number(v.salesPrice) || 0;
                         const sTax = Number(v.salesTax) || 0;
                         const finalMrp = sPrice + (sPrice * (sTax / 100));
@@ -479,71 +478,71 @@ const ProductForm: React.FC = () => {
           </Form>
         </Card.Body>
       </Card>
+
       {/* --- UNIFIED STOCK ADJUSTMENT MODAL --- */ }
-    <Modal show={showStockModal} onHide={() => setShowStockModal(false)} centered>
-      <Modal.Header closeButton>
-        <Modal.Title>{id ? 'Adjust Inventory' : 'Set Initial Opening Balance'}</Modal.Title>
-      </Modal.Header>
-      <Form onSubmit={handleStockSubmit}>
-        <Modal.Body>
-          {activeStockIndex !== null && (
-            <div className="mb-4 p-3 bg-light rounded border">
-              <h6 className="fw-bold">{formData.productName || 'New Product'}</h6>
-              <div className="text-muted font-monospace mb-2">{formData.variants[activeStockIndex].sku}</div>
-              <Badge bg="dark" className="me-2 text-uppercase">{formData.variants[activeStockIndex].size}</Badge>
-              <Badge bg="secondary" className="text-capitalize">{formData.variants[activeStockIndex].color}</Badge>
-              {id && (
-                <div className="mt-2">Current Stock: <strong>{formData.variants[activeStockIndex].stock}</strong></div>
-              )}
-            </div>
-          )}
+      <Modal show={showStockModal} onHide={() => setShowStockModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>{id ? 'Adjust Inventory' : 'Set Initial Opening Balance'}</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleStockSubmit}>
+          <Modal.Body>
+            {activeStockIndex !== null && (
+              <div className="mb-4 p-3 bg-light rounded border">
+                <h6 className="fw-bold">{formData.productName || 'New Product'}</h6>
+                <div className="text-muted font-monospace mb-2">{formData.variants[activeStockIndex].sku}</div>
+                <Badge bg="dark" className="me-2 text-uppercase">{formData.variants[activeStockIndex].size}</Badge>
+                <Badge bg="secondary" className="text-capitalize">{formData.variants[activeStockIndex].color}</Badge>
+                {id && (
+                  <div className="mt-2">Current Stock: <strong>{formData.variants[activeStockIndex].stock}</strong></div>
+                )}
+              </div>
+            )}
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              {id ? 'Units to Add/Remove (Use negative for removal)' : 'Total Initial Units (Opening Balance)'}
-            </Form.Label>
-            <Form.Control
-              type="number"
-              required
-              placeholder={id ? "e.g., 50 or -5" : "e.g., 100"}
-              value={adjQty}
-              onChange={(e) => setAdjQty(e.target.value)}
-              min={id ? undefined : "0"} // Only allow negative in edit mode
-            />
-          </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>
+                {id ? 'Units to Add/Remove (Use negative for removal)' : 'Total Initial Units (Opening Balance)'}
+              </Form.Label>
+              <Form.Control
+                type="number"
+                required
+                placeholder={id ? "e.g., 50 or -5" : "e.g., 100"}
+                value={adjQty}
+                onChange={(e) => setAdjQty(e.target.value)}
+                min={id ? undefined : "0"} 
+              />
+            </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Reason</Form.Label>
-            <Form.Select required value={stockReason} onChange={(e) => setStockReason(e.target.value)}>
-              {!id && <option value="Initial Stock Setup">Initial Stock Setup</option>}
-              <option value="New Purchase Order">New Purchase Order (Stock In)</option>
-              <option value="Customer Return">Customer Return (Stock In)</option>
-              <option value="Damaged/Defective">Damaged / Defective (Stock Out)</option>
-              <option value="Lost in Transit">Lost in Transit (Stock Out)</option>
-              <option value="Inventory Correction">Inventory Correction</option>
-              <option value="Other">Other</option>
-            </Form.Select>
-          </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Reason</Form.Label>
+              <Form.Select required value={stockReason} onChange={(e) => setStockReason(e.target.value)}>
+                {!id && <option value="Initial Stock Setup">Initial Stock Setup</option>}
+                <option value="New Purchase Order">New Purchase Order (Stock In)</option>
+                <option value="Customer Return">Customer Return (Stock In)</option>
+                <option value="Damaged/Defective">Damaged / Defective (Stock Out)</option>
+                <option value="Lost in Transit">Lost in Transit (Stock Out)</option>
+                <option value="Inventory Correction">Inventory Correction</option>
+                <option value="Other">Other</option>
+              </Form.Select>
+            </Form.Group>
 
-          <Form.Group className="mb-4">
-            <Form.Label>Additional Notes (Optional)</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={2}
-              placeholder="e.g., PO# 12345"
-              value={stockNotes}
-              onChange={(e) => setStockNotes(e.target.value)}
-            />
-          </Form.Group>
+            <Form.Group className="mb-4">
+              <Form.Label>Additional Notes (Optional)</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                placeholder="e.g., PO# 12345"
+                value={stockNotes}
+                onChange={(e) => setStockNotes(e.target.value)}
+              />
+            </Form.Group>
 
-          <Button variant="primary" className="w-100" type="submit" disabled={updateLoading}>
-            {updateLoading ? <Spinner size="sm" animation="border" /> : 'Confirm Stock'}
-          </Button>
-        </Modal.Body>
-      </Form>
-    </Modal>
+            <Button variant="primary" className="w-100" type="submit" disabled={updateLoading}>
+              {updateLoading ? <Spinner size="sm" animation="border" /> : 'Confirm Stock'}
+            </Button>
+          </Modal.Body>
+        </Form>
+      </Modal>
     </Container>
-
   );
 };
 

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, ListGroup, Image, Form, Button, Card, Alert, Spinner, Badge } from 'react-bootstrap';
+import { Container, Row, Col, ListGroup, Image, Button, Card, Alert, Spinner } from 'react-bootstrap';
 import { removeFromCart, fetchUserCart, updateCartQty } from '../../../store/actions/user/cartActions';
 import { RootState } from '../../../store/reducers';
 
@@ -33,11 +33,11 @@ const CartPage: React.FC = () => {
     // Condition 1: If it drops below 1, remove it completely
     if (newQty < 1) {
       removeFromCartHandler(item.sku);
-    } 
+    }
     // Condition 2: Prevent them from exceeding available stock
     else if (newQty > item.maxStock) {
       alert(`Sorry, we only have ${item.maxStock} of these left in stock!`);
-    } 
+    }
     // Condition 3: Update the quantity securely in the database
     else {
       dispatch(updateCartQty(item.sku, newQty));
@@ -46,12 +46,27 @@ const CartPage: React.FC = () => {
 
   const checkoutHandler = () => {
     // We will build this route next!
-    navigate('/checkout/shipping'); 
+    navigate('/checkout');
   };
 
   // Helper math functions for the Order Summary
+  const FREE_SHIPPING_THRESHOLD = 1000;
+  const SHIPPING_COST = 50;
+
   const totalItems = cartItems.reduce((acc: number, item: any) => acc + item.qty, 0);
-  const totalPrice = cartItems.reduce((acc: number, item: any) => acc + item.qty * item.price, 0);
+  const subtotal = cartItems.reduce((acc: number, item: any) => acc + item.qty * item.price, 0);
+
+  const shippingPrice = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+  const amountNeededForFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
+  const orderTotal = subtotal + shippingPrice;
+
+  const getEstimatedDelivery = () => {
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 5);
+    return deliveryDate.toLocaleDateString('en-IN', {
+      weekday: 'short', month: 'short', day: 'numeric'
+    });
+  };
 
   return (
     <Container className="py-5 min-vh-100">
@@ -79,11 +94,11 @@ const CartPage: React.FC = () => {
                   <Row className="align-items-center">
                     {/* Item Image */}
                     <Col xs={3} sm={2}>
-                      <Image 
-                        src={item.image || 'https://via.placeholder.com/150'} 
-                        alt={item.name} 
-                        fluid 
-                        rounded 
+                      <Image
+                        src={item.image || 'https://via.placeholder.com/150'}
+                        alt={item.name}
+                        fluid
+                        rounded
                         className="border shadow-sm"
                       />
                     </Col>
@@ -94,11 +109,12 @@ const CartPage: React.FC = () => {
                         {item.name}
                       </Link>
                       <div className="text-muted mt-1 small">
-                        <span className="text-capitalize me-2">Color: <strong>{item.color}</strong></span> | 
+                        <span className="text-capitalize me-2">Color: <strong>{item.color}</strong></span> |
                         <span className="text-uppercase ms-2">Size: <strong>{item.size}</strong></span>
                       </div>
-                      <div className="text-muted font-monospace mt-1" style={{ fontSize: '0.75rem' }}>
-                        SKU: {item.sku}
+                      <div className="text-success small mt-2 fw-bold">
+                        <i className="bi bi-truck me-1"></i>
+                        Est. Delivery: {getEstimatedDelivery()}
                       </div>
                     </Col>
 
@@ -109,34 +125,34 @@ const CartPage: React.FC = () => {
 
                     {/* Static Quantity Display (Since math is done on Add to Cart) */}
                     <Col xs={4} sm={2} className="mt-3 mt-sm-0 text-center">
-                       <div className="text-muted small mb-1">Qty</div>
-                       <div className="d-flex align-items-center justify-content-center gap-2">
-                         <Button 
-                           variant="outline-secondary" 
-                           size="sm" 
-                           onClick={() => handleQtyChange(item, item.qty - 1)}
-                         >
-                           -
-                         </Button>
-                         
-                         <span className="fw-bold fs-5 px-1">{item.qty}</span>
-                         
-                         <Button 
-                           variant="outline-secondary" 
-                           size="sm" 
-                           onClick={() => handleQtyChange(item, item.qty + 1)}
-                           disabled={item.qty >= item.maxStock} // Auto-disable if max stock reached
-                         >
-                           +
-                         </Button>
-                       </div>
+                      <div className="text-muted small mb-1">Qty</div>
+                      <div className="d-flex align-items-center justify-content-center gap-2">
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          onClick={() => handleQtyChange(item, item.qty - 1)}
+                        >
+                          -
+                        </Button>
+
+                        <span className="fw-bold fs-5 px-1">{item.qty}</span>
+
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          onClick={() => handleQtyChange(item, item.qty + 1)}
+                          disabled={item.qty >= item.maxStock} // Auto-disable if max stock reached
+                        >
+                          +
+                        </Button>
+                      </div>
                     </Col>
 
                     {/* Remove Button */}
                     <Col xs={4} sm={2} className="mt-3 mt-sm-0 text-end">
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm" 
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
                         onClick={() => removeFromCartHandler(item.sku)}
                         title="Remove from Cart"
                       >
@@ -154,32 +170,50 @@ const CartPage: React.FC = () => {
             <Card className="shadow-sm border-0 bg-light">
               <Card.Body className="p-4">
                 <h4 className="fw-bold border-bottom pb-3 mb-4">Order Summary</h4>
-                
-                <div className="d-flex justify-content-between mb-3 fs-5">
+
+                {/* 🎯 THE UPSELL ALERT */}
+                {subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD ? (
+                  <Alert variant="warning" className="py-2 text-center small fw-bold shadow-sm">
+                    Add ₹{amountNeededForFreeShipping.toFixed(2)} more to get FREE shipping!
+                  </Alert>
+                ) : subtotal >= FREE_SHIPPING_THRESHOLD ? (
+                  <Alert variant="success" className="py-2 text-center small fw-bold shadow-sm">
+                    🎉 You've unlocked FREE shipping!
+                  </Alert>
+                ) : null}
+
+                <div className="d-flex justify-content-between mb-2 fs-5">
                   <span className="text-muted">Total Items:</span>
                   <span className="fw-bold">{totalItems}</span>
                 </div>
 
-                <div className="d-flex justify-content-between mb-4 fs-4">
-                  <span className="fw-bold">Subtotal:</span>
-                  <span className="fw-bold text-primary">₹{totalPrice.toFixed(2)}</span>
+                <div className="d-flex justify-content-between mb-2 fs-5">
+                  <span className="text-muted">Subtotal:</span>
+                  <span className="fw-bold">₹{subtotal.toFixed(2)}</span>
                 </div>
 
-                <hr className="mb-4" />
+                <div className="d-flex justify-content-between mb-3 fs-5 border-bottom pb-3">
+                  <span className="text-muted">Shipping:</span>
+                  <span className="fw-bold">
+                    {shippingPrice === 0 ? <span className="text-success">Free</span> : `₹${shippingPrice.toFixed(2)}`}
+                  </span>
+                </div>
 
-                <Button 
-                  variant="dark" 
-                  size="lg" 
+                <div className="d-flex justify-content-between mb-4 fs-4">
+                  <span className="fw-bold">Total:</span>
+                  <span className="fw-bold text-primary">₹{orderTotal.toFixed(2)}</span>
+                </div>
+
+                <Button
+                  variant="dark"
+                  size="lg"
                   className="w-100 py-3 fw-bold text-uppercase shadow"
                   onClick={checkoutHandler}
                   disabled={cartItems.length === 0}
                 >
                   Proceed to Checkout
                 </Button>
-                
-                <div className="text-center mt-3 small text-muted">
-                  <i className="bi bi-shield-lock me-1"></i> Secure Checkout
-                </div>
+
               </Card.Body>
             </Card>
           </Col>
