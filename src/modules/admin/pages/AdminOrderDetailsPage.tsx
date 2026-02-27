@@ -11,9 +11,6 @@ const AdminOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const dispatch = useDispatch<any>();
 
-    const adminAuth = useSelector((state: RootState) => state.adminAuth || {});
-    const userInfo = (adminAuth as any).adminInfo || (adminAuth as any).userInfo;
-
     const orderDetails = useSelector((state: RootState) => state.orderDetails || {});
     const { order, loading, error } = orderDetails as any;
 
