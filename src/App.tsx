@@ -1,31 +1,31 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // Common Imports
-import Layout from './common/components/Layout';
-import HomePage from './modules/storefront/pages/HomePage';
+import Layout from './common/components/Layout.tsx';
+import HomePage from './modules/storefront/pages/HomePage.tsx';
 
-import ProductDetailsPage from './modules/storefront/pages/ProductDetailsPage';
+import ProductDetailsPage from './modules/storefront/pages/ProductDetailsPage.tsx';
 
 // User Imports
-import UserLogin from './modules/user/pages/UserLogin';
-import UserRegister from './modules/user/pages/UserRegister';
-import CartPage from './modules/user/pages/CartPage';
-import OrderHistoryPage from './modules/user/pages/OrderHistoryPage';
-import CheckoutPage from './modules/user/pages/CheckoutPage';
-import OrderSuccessPage from './modules/user/pages/OrderSuccessPage';
-import OrderDetailsPage from './modules/user/pages/OrderDetailsPage';
+import UserLogin from './modules/user/pages/UserLogin.tsx';
+import UserRegister from './modules/user/pages/UserRegister.tsx';
+import CartPage from './modules/user/pages/CartPage.tsx';
+import OrderHistoryPage from './modules/user/pages/OrderHistoryPage.tsx';
+import CheckoutPage from './modules/user/pages/CheckoutPage.tsx';
+import OrderSuccessPage from './modules/user/pages/OrderSuccessPage.tsx';
+import OrderDetailsPage from './modules/user/pages/OrderDetailsPage.tsx';
 
 // Admin Imports
-import AdminLogin from './modules/admin/pages/AdminLogin';
-import AdminRegister from './modules/admin/pages/AdminRegister';
-import AdminDashboardPage from './modules/admin/pages/AdminDashboardPage';
-import ProductList from './modules/admin/pages/ProductList';
-import ProductForm from './modules/admin/pages/ProductForm';
-import MasterDataManagement from './modules/admin/pages/MasterDataManagement';
-import InventoryManagement from './modules/admin/pages/InventoryManagement';
-import OrdersPage from './modules/admin/pages/AdminOrdersPage';
-import AdminOrderDetailsPage from './modules/admin/pages/AdminOrderDetailsPage';
-import AdminCouponsPage from './modules/admin/pages/AdminCouponsPage';
+import AdminLogin from './modules/admin/pages/AdminLogin.tsx';
+import AdminRegister from './modules/admin/pages/AdminRegister.tsx';
+import AdminDashboardPage from './modules/admin/pages/AdminDashboardPage.tsx';
+import ProductList from './modules/admin/pages/ProductList.tsx';
+import ProductForm from './modules/admin/pages/ProductForm.tsx';
+import MasterDataManagement from './modules/admin/pages/MasterDataManagement.tsx';
+import InventoryManagement from './modules/admin/pages/InventoryManagement.tsx';
+import OrdersPage from './modules/admin/pages/AdminOrdersPage.tsx';
+import AdminOrderDetailsPage from './modules/admin/pages/AdminOrderDetailsPage.tsx';
+import AdminCouponsPage from './modules/admin/pages/AdminCouponsPage.tsx';
 
 function App() {
   return (
