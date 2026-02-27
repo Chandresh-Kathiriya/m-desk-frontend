@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Table, Spinner, Badge, Dropdown, Alert } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { RootState } from '../../../store/reducers';
 import { listCoupons, createCoupon } from '../../../store/actions/admin/couponActions';
 import { COUPON_CREATE_RESET } from '../../../store/constants/admin/couponConstants';
+
+import styles from '../../../schemas/css/AdminCouponsPage.module.css';
 
 const AdminCouponsPage: React.FC = () => {
     const dispatch = useDispatch<any>();
@@ -39,13 +40,11 @@ const AdminCouponsPage: React.FC = () => {
             try {
                 const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
 
-                console.log("🚀 Starting Master Data fetch...");
-
                 const [catRes, brandRes, styleRes, typeRes] = await Promise.all([
-                    axios.get('/api/categories', config).catch(err => { console.error("Category fetch failed:", err); return { data: null }; }),
-                    axios.get('/api/brands', config).catch(err => { console.error("Brand fetch failed:", err); return { data: null }; }),
-                    axios.get('/api/styles', config).catch(err => { console.error("Style fetch failed:", err); return { data: null }; }),
-                    axios.get('/api/types', config).catch(err => { console.error("Type fetch failed:", err); return { data: null }; })
+                    axios.get('/api/categories', config).catch(() => ({ data: null })),
+                    axios.get('/api/brands', config).catch(() => ({ data: null })),
+                    axios.get('/api/styles', config).catch(() => ({ data: null })),
+                    axios.get('/api/types', config).catch(() => ({ data: null }))
                 ]);
 
                 // Aggressive Array Extractor
@@ -60,23 +59,17 @@ const AdminCouponsPage: React.FC = () => {
                     return [];
                 };
 
-                const categories = getArray(catRes.data, 'categories');
-                const brands = getArray(brandRes.data, 'brands');
-                const styles = getArray(styleRes.data, 'styles');
-                const types = getArray(typeRes.data, 'types');
-
                 const combinedOptions = [
-                    ...categories.map((item: any) => ({ ...item, group: 'Category' })),
-                    ...brands.map((item: any) => ({ ...item, group: 'Brand' })),
-                    ...styles.map((item: any) => ({ ...item, group: 'Style' })),
-                    ...types.map((item: any) => ({ ...item, group: 'Product Type' }))
+                    ...getArray(catRes.data, 'categories').map((item: any) => ({ ...item, group: 'Category' })),
+                    ...getArray(brandRes.data, 'brands').map((item: any) => ({ ...item, group: 'Brand' })),
+                    ...getArray(styleRes.data, 'styles').map((item: any) => ({ ...item, group: 'Style' })),
+                    ...getArray(typeRes.data, 'types').map((item: any) => ({ ...item, group: 'Product Type' }))
                 ];
 
                 setMasterDataOptions(combinedOptions);
-                dispatch(listCoupons()); // Fetch coupons via Redux
+                dispatch(listCoupons()); 
                 setLoadingMasterData(false);
             } catch (error) {
-                console.error("🔥 Fatal error in fetchInitialData:", error);
                 setMasterDataOptions([]);
                 setLoadingMasterData(false);
             }
@@ -84,7 +77,6 @@ const AdminCouponsPage: React.FC = () => {
         fetchInitialData();
     }, [userInfo, dispatch]);
 
-    // Handle Create Success
     useEffect(() => {
         if (successCreate) {
             alert('Coupon created successfully!');
@@ -93,18 +85,16 @@ const AdminCouponsPage: React.FC = () => {
             setExpiryDate('');
             setApplicableRules([]);
             dispatch({ type: COUPON_CREATE_RESET });
-            dispatch(listCoupons()); // Refresh table
+            dispatch(listCoupons()); 
         }
     }, [successCreate, dispatch]);
 
     const submitHandler = (e: React.FormEvent) => {
         e.preventDefault();
-        const payload = {
+        dispatch(createCoupon({
             code, discountType, discountValue, minCartValue,
-            applicableRules,
-            isFirstTimeUserOnly, usageLimit, expiryDate
-        };
-        dispatch(createCoupon(payload));
+            applicableRules, isFirstTimeUserOnly, usageLimit, expiryDate
+        }));
     };
 
     const getRuleDetails = (ruleIds: string[]) => {
@@ -113,175 +103,179 @@ const AdminCouponsPage: React.FC = () => {
     };
 
     return (
-        <Container className="py-5">
-            <h2 className="fw-bold mb-4">Manage Discount Codes</h2>
+        <main className={styles['page-wrapper']}>
+            <div className={styles.container}>
+                <h1 className={styles['page-title']}>Manage Discount Codes</h1>
 
-            <Row className="g-4">
-                {/* --- LEFT: CREATE COUPON FORM --- */}
-                <Col lg={4}>
-                    <Card className="shadow-sm border-0">
-                        <Card.Body className="p-4">
-                            <h5 className="fw-bold mb-3">Create New Coupon</h5>
-                            {errorCreate && <Alert variant="danger">{errorCreate}</Alert>}
-                            
-                            <Form onSubmit={submitHandler}>
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small fw-bold text-muted text-uppercase">Coupon Code</Form.Label>
-                                    <Form.Control type="text" placeholder="e.g. SUMMER20" value={code} onChange={(e) => setCode(e.target.value)} required />
-                                </Form.Group>
+                <div className={styles.layout}>
+                    
+                    {/* --- LEFT: CREATE COUPON FORM --- */}
+                    <div className={styles.card}>
+                        <h2 className={styles['card-title']}>Create New Coupon</h2>
+                        
+                        {errorCreate && (
+                            <div className={`${styles.alert} ${styles['alert--error']}`}>
+                                {errorCreate}
+                            </div>
+                        )}
+                        
+                        <form onSubmit={submitHandler}>
+                            <div className={styles['form-group']}>
+                                <label className={styles.label}>Coupon Code</label>
+                                <input type="text" className={styles.input} placeholder="e.g. SUMMER20" value={code} onChange={(e) => setCode(e.target.value)} required />
+                            </div>
 
-                                <Row>
-                                    <Col xs={6}>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label className="small fw-bold text-muted text-uppercase">Type</Form.Label>
-                                            <Form.Select value={discountType} onChange={(e) => setDiscountType(e.target.value)}>
-                                                <option value="percentage">% Off</option>
-                                                <option value="flat">Flat Amount</option>
-                                            </Form.Select>
-                                        </Form.Group>
-                                    </Col>
-                                    <Col xs={6}>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label className="small fw-bold text-muted text-uppercase">Value</Form.Label>
-                                            <Form.Control type="number" required value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))} />
-                                        </Form.Group>
-                                    </Col>
-                                </Row>
+                            <div className={styles['form-row']}>
+                                <div className={styles['form-group']}>
+                                    <label className={styles.label}>Type</label>
+                                    <select className={styles.select} value={discountType} onChange={(e) => setDiscountType(e.target.value)}>
+                                        <option value="percentage">% Off</option>
+                                        <option value="flat">Flat Amount</option>
+                                    </select>
+                                </div>
+                                <div className={styles['form-group']}>
+                                    <label className={styles.label}>Value</label>
+                                    <input type="number" className={styles.input} required value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))} />
+                                </div>
+                            </div>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small fw-bold text-muted text-uppercase">Minimum Cart Value (₹)</Form.Label>
-                                    <Form.Control type="number" value={minCartValue} onChange={(e) => setMinCartValue(Number(e.target.value))} />
-                                </Form.Group>
+                            <div className={styles['form-group']}>
+                                <label className={styles.label}>Minimum Cart Value (₹)</label>
+                                <input type="number" className={styles.input} value={minCartValue} onChange={(e) => setMinCartValue(Number(e.target.value))} />
+                            </div>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label className="small fw-bold text-muted text-uppercase">Applicable Rules (Leave empty for ALL products)</Form.Label>
-                                    <div className="border rounded p-3 bg-white" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                        {loadingMasterData ? (
-                                            <span className="text-muted small">
-                                                <Spinner animation="border" size="sm" className="me-2" /> Loading options...
-                                            </span>
-                                        ) : masterDataOptions.length === 0 ? (
-                                            <span className="text-muted small text-danger">No master data found. Please add Categories/Brands first.</span>
-                                        ) : (
-                                            masterDataOptions.map((option: any) => (
-                                                <Form.Check
-                                                    key={option._id}
-                                                    type="checkbox"
-                                                    id={`rule-${option._id}`}
-                                                    label={<><span className="fw-bold">{option.name}</span> <span className="text-muted small">({option.group})</span></>}
+                            <div className={styles['form-group']}>
+                                <label className={styles.label}>Applicable Rules (Empty = All Products)</label>
+                                <div className={styles['scroll-box']}>
+                                    {loadingMasterData ? (
+                                        <div className={styles['spinner-container']}>
+                                            <div className={styles.spinner}></div>
+                                        </div>
+                                    ) : masterDataOptions.length === 0 ? (
+                                        <span style={{color: 'var(--color-error-600)', fontSize: 'var(--text-sm)'}}>No master data found.</span>
+                                    ) : (
+                                        masterDataOptions.map((option: any) => (
+                                            <label key={option._id} className={styles['checkbox-item']}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    className={styles['checkbox-input']}
                                                     checked={applicableRules.includes(option._id)}
                                                     onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setApplicableRules([...applicableRules, option._id]);
-                                                        } else {
-                                                            setApplicableRules(applicableRules.filter(id => id !== option._id));
-                                                        }
+                                                        if (e.target.checked) setApplicableRules([...applicableRules, option._id]);
+                                                        else setApplicableRules(applicableRules.filter(id => id !== option._id));
                                                     }}
-                                                    className="mb-2"
                                                 />
-                                            ))
-                                        )}
-                                    </div>
-                                </Form.Group>
+                                                <span className={styles['checkbox-label']}>
+                                                    <strong>{option.name}</strong> 
+                                                    <span className={styles['checkbox-meta']}>({option.group})</span>
+                                                </span>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
 
-                                <Row>
-                                    <Col xs={6}>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label className="small fw-bold text-muted text-uppercase">Usage Limit</Form.Label>
-                                            <Form.Control type="number" required value={usageLimit} onChange={(e) => setUsageLimit(Number(e.target.value))} />
-                                        </Form.Group>
-                                    </Col>
-                                    <Col xs={6}>
-                                        <Form.Group className="mb-3">
-                                            <Form.Label className="small fw-bold text-muted text-uppercase">Expiry Date</Form.Label>
-                                            <Form.Control type="date" required value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
-                                        </Form.Group>
-                                    </Col>
-                                </Row>
+                            <div className={styles['form-row']}>
+                                <div className={styles['form-group']}>
+                                    <label className={styles.label}>Usage Limit</label>
+                                    <input type="number" className={styles.input} required value={usageLimit} onChange={(e) => setUsageLimit(Number(e.target.value))} />
+                                </div>
+                                <div className={styles['form-group']}>
+                                    <label className={styles.label}>Expiry Date</label>
+                                    <input type="date" className={styles.input} required value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+                                </div>
+                            </div>
 
-                                <Form.Group className="mb-4">
-                                    <Form.Check
-                                        type="switch"
-                                        id="first-time-switch"
-                                        label={<span className="fw-bold">First-Time Users Only</span>}
+                            <div className={styles['form-group']}>
+                                <label className={styles['switch-wrapper']}>
+                                    <input 
+                                        type="checkbox" 
+                                        className={styles['switch-input']} 
                                         checked={isFirstTimeUserOnly}
                                         onChange={(e) => setIsFirstTimeUserOnly(e.target.checked)}
                                     />
-                                </Form.Group>
+                                    <div className={styles.switch}></div>
+                                    <span className={styles['switch-label']}>First-Time Users Only</span>
+                                </label>
+                            </div>
 
-                                <Button type="submit" variant="dark" className="w-100 py-2 fw-bold" disabled={loadingCreate}>
-                                    {loadingCreate ? <Spinner size="sm" /> : 'Create Promo Code'}
-                                </Button>
-                            </Form>
-                        </Card.Body>
-                    </Card>
-                </Col>
+                            <button type="submit" className={styles['btn-submit']} disabled={loadingCreate}>
+                                {loadingCreate ? <div className={`${styles.spinner} ${styles['spinner--light']}`}></div> : 'Create Promo Code'}
+                            </button>
+                        </form>
+                    </div>
 
-                {/* --- RIGHT: ACTIVE COUPONS TABLE --- */}
-                <Col lg={8}>
-                    <Card className="shadow-sm border-0">
-                        <Card.Body className="p-0">
-                            {loadingCoupons ? <Spinner animation="border" className="m-4" /> : errorCoupons ? <Alert variant="danger" className="m-4">{errorCoupons}</Alert> : (
-                                <Table hover responsive className="align-middle mb-0">
-                                    <thead className="bg-light">
+                    {/* --- RIGHT: ACTIVE COUPONS TABLE --- */}
+                    <div className={`${styles.card} ${styles['table-card']}`}>
+                        {loadingCoupons ? (
+                            <div className={styles['spinner-container']}>
+                                <div className={styles.spinner}></div>
+                            </div>
+                        ) : errorCoupons ? (
+                            <div className={`${styles.alert} ${styles['alert--error']}`} style={{ margin: 'var(--space-6)'}}>
+                                {errorCoupons}
+                            </div>
+                        ) : (
+                            <div className={styles['table-responsive']}>
+                                <table className={styles['admin-table']}>
+                                    <thead>
                                         <tr>
-                                            <th className="px-4 py-3">CODE</th>
-                                            <th className="py-3">DISCOUNT</th>
-                                            <th className="py-3">Min Cart Amount</th>
-                                            <th className="py-3">CONDITIONS</th>
-                                            <th className="py-3">USAGE</th>
-                                            <th className="py-3 text-end px-4">STATUS</th>
+                                            <th>Code</th>
+                                            <th>Discount</th>
+                                            <th>Min Order</th>
+                                            <th>Conditions</th>
+                                            <th className={styles['align-center']}>Usage</th>
+                                            <th className={styles['align-right']}>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {coupons.map((c: any) => (
                                             <tr key={c._id}>
-                                                <td className="px-4 fw-bold text-primary">{c.code}</td>
+                                                <td className={styles['text-code']}>{c.code}</td>
                                                 <td>{c.discountType === 'percentage' ? `${c.discountValue}% OFF` : `₹${c.discountValue} OFF`}</td>
-                                                <td className="small text-muted">
-                                                    {c.minCartValue > 0 && <div className="text-nowrap">₹{c.minCartValue}</div>}
+                                                <td>
+                                                    {c.minCartValue > 0 ? `₹${c.minCartValue}` : '-'}
                                                 </td>
-                                                <td className="small text-muted">
-                                                    {c.isFirstTimeUserOnly && <div className="text-info fw-bold">New Users Only</div>}
-                                                    <div className="mt-1">
+                                                <td>
+                                                    {c.isFirstTimeUserOnly && <div className={`${styles.badge} ${styles['badge--info']}`} style={{marginBottom: 'var(--space-2)'}}>New Users Only</div>}
+                                                    <div>
                                                         {c.applicableRules && c.applicableRules.length > 0 ? (
-                                                            <Dropdown>
-                                                                <Dropdown.Toggle variant="outline-secondary" size="sm" id={`dropdown-${c._id}`}>
-                                                                    {c.applicableRules.length} Rules Applied
-                                                                </Dropdown.Toggle>
-                                                                <Dropdown.Menu className="shadow-sm">
+                                                            <details className={styles['rules-details']}>
+                                                                <summary className={styles['rules-summary']}>
+                                                                    {c.applicableRules.length} Rules Applied ▾
+                                                                </summary>
+                                                                <div className={styles['rules-list']}>
                                                                     {getRuleDetails(c.applicableRules).map((rule: any, idx: number) => (
-                                                                        <Dropdown.Item key={idx} as="div" className="bg-transparent" style={{ pointerEvents: 'none' }}>
-                                                                            <span className="fw-bold">{rule.name}</span> <span className="text-muted small">({rule.group})</span>
-                                                                        </Dropdown.Item>
+                                                                        <div key={idx}><strong>{rule.name}</strong> ({rule.group})</div>
                                                                     ))}
-                                                                </Dropdown.Menu>
-                                                            </Dropdown>
+                                                                </div>
+                                                            </details>
                                                         ) : (
-                                                            <Badge bg="secondary">All Products</Badge>
+                                                            <span className={`${styles.badge} ${styles['badge--neutral']}`}>All Products</span>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td>
+                                                <td className={styles['align-center']}>
                                                     {c.usedCount} / {c.usageLimit}
                                                 </td>
-                                                <td className="text-end px-4">
+                                                <td className={styles['align-right']}>
                                                     {new Date(c.expiryDate) < new Date() || c.usedCount >= c.usageLimit ? (
-                                                        <Badge bg="danger">Expired</Badge>
+                                                        <span className={`${styles.badge} ${styles['badge--error']}`}>Expired</span>
                                                     ) : (
-                                                        <Badge bg="success">Active</Badge>
+                                                        <span className={`${styles.badge} ${styles['badge--success']}`}>Active</span>
                                                     )}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
-                                </Table>
-                            )}
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-        </Container>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
+                </div>
+            </div>
+        </main>
     );
 };
 

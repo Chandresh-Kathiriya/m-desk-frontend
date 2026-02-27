@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { Container, Card, Spinner } from 'react-bootstrap';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../../store/reducers';
 import { verifyOrderPayment } from '../../../store/actions/user/orderActions';
 import { clearUserCart } from '../../../store/actions/user/cartActions';
+
+import styles from '../../../schemas/css/OrderSuccessPage.module.css';
 
 const OrderSuccessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -38,26 +39,28 @@ const OrderSuccessPage: React.FC = () => {
   }, [paymentIntent, userInfo, dispatch, navigate]);
 
   return (
-    <Container className="py-5 d-flex justify-content-center align-items-center min-vh-100">
-      <Card className="shadow-lg border-0 text-center p-5" style={{ maxWidth: '500px' }}>
-        <div className="mb-4">
-          {/* A big green checkmark circle */}
-          <div className="rounded-circle bg-success d-flex justify-content-center align-items-center mx-auto" style={{ width: '80px', height: '80px' }}>
-            <i className="bi bi-check-lg text-white" style={{ fontSize: '3rem' }}></i>
-          </div>
+    <main className={styles['success-page']}>
+      <div className={styles['success-card']}>
+        
+        <div className={styles['icon-wrapper']}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
         </div>
         
-        <h2 className="fw-bold mb-3">Payment Successful!</h2>
-        <p className="text-muted fs-5 mb-4">
+        <h1 className={styles.title}>Payment Successful!</h1>
+        
+        <p className={styles.message}>
           Thank you for your purchase. We are preparing your order for shipment.
         </p>
         
-        <div className="d-flex justify-content-center align-items-center text-muted small">
-          <Spinner animation="border" size="sm" className="me-2" />
-          Redirecting to your orders...
+        <div className={styles['redirect-container']}>
+          <div className={styles.spinner}></div>
+          <span>Redirecting to your orders...</span>
         </div>
-      </Card>
-    </Container>
+
+      </div>
+    </main>
   );
 };
 

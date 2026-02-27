@@ -1,7 +1,7 @@
 import {
     INVENTORY_LIST_REQUEST, INVENTORY_LIST_SUCCESS, INVENTORY_LIST_FAIL,
     INVENTORY_UPDATE_REQUEST, INVENTORY_UPDATE_SUCCESS, INVENTORY_UPDATE_FAIL, INVENTORY_UPDATE_RESET
-  } from '../../actions/admin/inventoryActions';
+  } from '../../constants/admin/inventoryConstants';
   
   export const inventoryListReducer = (state = { inventory: [] }, action: any) => {
     switch (action.type) {

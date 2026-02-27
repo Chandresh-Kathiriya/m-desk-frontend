@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Row, Col, Card, ListGroup, Button, Table, Spinner, Alert, Modal, Form, Badge } from 'react-bootstrap';
 import { listMasterData, createMasterData, updateMasterData, deleteMasterData } from '../../../store/actions/admin/masterDataActions';
 import { MASTER_DATA_CREATE_RESET, MASTER_DATA_UPDATE_RESET } from '../../../store/constants/admin/masterDataConstants';
 import { RootState } from '../../../store/reducers';
 
+import styles from '../../../schemas/css/MasterDataManagement.module.css';
+
 const emptyRow = { name: '', description: '', hexCode: '#000000', code: '' };
+
+const tabs = [
+    { id: 'brands', label: 'Brands' },
+    { id: 'colors', label: 'Colors' },
+    { id: 'sizes', label: 'Sizes' },
+    { id: 'styles', label: 'Styles' },
+    { id: 'categories', label: 'Categories' },
+    { id: 'types', label: 'Product Types' },
+] as const;
+
+type TabType = typeof tabs[number]['id'];
 
 const MasterDataManagement: React.FC = () => {
   const dispatch = useDispatch<any>();
-  const [activeTab, setActiveTab] = useState<'brands' | 'colors' | 'sizes' | 'styles' | 'categories' | 'types'>('brands');
+  const [activeTab, setActiveTab] = useState<TabType>('brands');
   
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null); 
   
-  // --- NEW: Array State for Bulk Add ---
   const [formDataArray, setFormDataArray] = useState([{ ...emptyRow }]);
 
   const masterDataList = useSelector((state: RootState) => state.masterDataList || {} as any);
@@ -68,7 +79,6 @@ const MasterDataManagement: React.FC = () => {
     }
   };
 
-  // --- NEW: Dynamic Row Handlers ---
   const handleRowChange = (index: number, field: string, value: string) => {
     const updated = [...formDataArray];
     updated[index] = { ...updated[index], [field]: value };
@@ -87,159 +97,186 @@ const MasterDataManagement: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      // Editing sends a single object
       dispatch(updateMasterData(activeTab, editingId, formDataArray[0]));
     } else {
-      // Creating sends the whole array (Bulk Add)
       dispatch(createMasterData(activeTab, formDataArray));
     }
   };
 
   return (
-    <Container className="py-4">
-      <h2 className="mb-4">Master Data Management</h2>
-      <Row>
-        <Col md={3}>
-          <Card className="shadow-sm">
-            <ListGroup variant="flush">
-              <ListGroup.Item action active={activeTab === 'brands'} onClick={() => setActiveTab('brands')}>Brands</ListGroup.Item>
-              <ListGroup.Item action active={activeTab === 'colors'} onClick={() => setActiveTab('colors')}>Colors</ListGroup.Item>
-              <ListGroup.Item action active={activeTab === 'sizes'} onClick={() => setActiveTab('sizes')}>Sizes</ListGroup.Item>
-              <ListGroup.Item action active={activeTab === 'styles'} onClick={() => setActiveTab('styles')}>Styles</ListGroup.Item>
-              <ListGroup.Item action active={activeTab === 'categories'} onClick={() => setActiveTab('categories')}>Categories</ListGroup.Item>
-              <ListGroup.Item action active={activeTab === 'types'} onClick={() => setActiveTab('types')}>Product Types</ListGroup.Item>
-            </ListGroup>
-          </Card>
-        </Col>
+    <main className={styles['page-wrapper']}>
+      <div className={styles.container}>
+        <h1 className={styles['page-title']}>Master Data Management</h1>
+        
+        <div className={styles.layout}>
+          
+          {/* --- SIDEBAR NAV --- */}
+          <aside className={styles['nav-card']}>
+            <ul className={styles['nav-list']}>
+              {tabs.map((tab) => (
+                <li 
+                  key={tab.id}
+                  className={`${styles['nav-item']} ${activeTab === tab.id ? styles['nav-item--active'] : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </li>
+              ))}
+            </ul>
+          </aside>
 
-        <Col md={9}>
-          <Card className="shadow-sm border-top border-primary border-4">
-            <Card.Body>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h4 className="text-capitalize mb-0">{activeTab}</h4>
-                <Button variant="primary" size="sm" onClick={handleOpenCreate}>
-                  + Add New {activeTab.slice(0, -1)}
-                </Button>
+          {/* --- MAIN CONTENT --- */}
+          <section className={styles['content-card']}>
+            <div className={styles['card-header']}>
+              <h2 className={styles['card-title']}>{activeTab}</h2>
+              <button className={`${styles.btn} ${styles['btn-primary']}`} onClick={handleOpenCreate}>
+                + Add New {activeTab.slice(0, -1)}
+              </button>
+            </div>
+
+            {loading ? (
+              <div className={styles['spinner-container']}><div className={styles.spinner}></div></div>
+            ) : error ? (
+              <div style={{ padding: 'var(--space-6)' }}>
+                <div className={`${styles.alert} ${styles['alert--error']}`}>{error}</div>
               </div>
-
-              {loading ? <Spinner animation="border" className="d-block mx-auto" /> : error ? <Alert variant="danger">{error}</Alert> : (
-                <Table responsive hover className="align-middle">
-                  <thead className="table-light">
+            ) : (
+              <div className={styles['table-responsive']}>
+                <table className={styles['admin-table']}>
+                  <thead>
                     <tr>
                       <th>Name</th>
                       {(activeTab === 'brands' || activeTab === 'categories') && <th>Description</th>}
                       {activeTab === 'colors' && <th>Color Swatch</th>}
                       {activeTab === 'sizes' && <th>Size Code</th>}
-                      <th className="text-end">Actions</th>
+                      <th className={styles['align-right']}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {currentRecords.map((record: any) => (
                       <tr key={record._id}>
-                        <td className="fw-bold">{record.name}</td>
+                        <td className={styles['fw-bold']}>{record.name}</td>
                         {(activeTab === 'brands' || activeTab === 'categories') && <td>{record.description || '-'}</td>}
+                        
                         {activeTab === 'colors' && (
                           <td>
-                            <Badge bg="light" text="dark" className="border d-flex align-items-center" style={{ width: 'fit-content' }}>
-                              <div style={{ width: '15px', height: '15px', backgroundColor: record.hexCode, borderRadius: '50%', marginRight: '8px', border: '1px solid #ccc' }}></div>
+                            <span className={`${styles.badge} ${styles['badge--light']}`}>
+                              <div className={styles['color-swatch']} style={{ backgroundColor: record.hexCode }}></div>
                               {record.hexCode}
-                            </Badge>
+                            </span>
                           </td>
                         )}
-                        {activeTab === 'sizes' && <td><Badge bg="secondary">{record.code}</Badge></td>}
-                        <td className="text-end">
-                          <Button variant="outline-primary" size="sm" className="me-2" onClick={() => handleOpenEdit(record)}>Edit</Button>
-                          <Button variant="outline-danger" size="sm" onClick={() => handleDelete(record._id)}>Delete</Button>
+                        
+                        {activeTab === 'sizes' && <td><span className={`${styles.badge} ${styles['badge--dark']}`}>{record.code}</span></td>}
+                        
+                        <td className={styles['align-right']}>
+                          <button className={`${styles.btn} ${styles['btn-outline-primary']}`} style={{ marginRight: '8px' }} onClick={() => handleOpenEdit(record)}>Edit</button>
+                          <button className={`${styles.btn} ${styles['btn-outline-danger']}`} onClick={() => handleDelete(record._id)}>Delete</button>
                         </td>
                       </tr>
                     ))}
-                    {currentRecords.length === 0 && <tr><td colSpan={5} className="text-center py-4">No records found.</td></tr>}
+                    {currentRecords.length === 0 && (
+                      <tr><td colSpan={5} className="text-center py-4 text-muted" style={{ padding: 'var(--space-8)' }}>No records found.</td></tr>
+                    )}
                   </tbody>
-                </Table>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* --- NEW BULK ADD MODAL --- */}
-      <Modal show={showModal} onHide={handleCloseModal} centered size={editingId ? 'sm' : 'lg'}>
-        <Modal.Header closeButton>
-          <Modal.Title className="text-capitalize">
-            {editingId ? 'Edit' : 'Bulk Add'} {activeTab}
-          </Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleSubmit}>
-          <Modal.Body className="bg-light">
-            {(createError || updateError) && <Alert variant="danger">{createError || updateError}</Alert>}
-
-            {formDataArray.map((row, index) => (
-              <Card key={index} className="mb-3 shadow-sm border-0 relative">
-                <Card.Body>
-                  {/* Remove Row Button (Only show if creating and multiple rows exist) */}
-                  {!editingId && formDataArray.length > 1 && (
-                    <Button variant="link" className="text-danger position-absolute top-0 end-0 text-decoration-none" onClick={() => handleRemoveRow(index)}>
-                      &times; Remove
-                    </Button>
-                  )}
-
-                  <Row>
-                    <Col md={(activeTab === 'colors' || activeTab === 'sizes') ? 6 : 12}>
-                      <Form.Group className="mb-3">
-                        <Form.Label className="fw-bold text-muted small text-uppercase">Name</Form.Label>
-                        <Form.Control type="text" required value={row.name} onChange={(e) => handleRowChange(index, 'name', e.target.value)} />
-                      </Form.Group>
-                    </Col>
-
-                    {(activeTab === 'brands' || activeTab === 'categories') && (
-                      <Col md={12}>
-                        <Form.Group className="mb-3">
-                          <Form.Label className="fw-bold text-muted small text-uppercase">Description</Form.Label>
-                          <Form.Control as="textarea" rows={2} value={row.description} onChange={(e) => handleRowChange(index, 'description', e.target.value)} />
-                        </Form.Group>
-                      </Col>
-                    )}
-
-                    {activeTab === 'sizes' && (
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label className="fw-bold text-muted small text-uppercase">Size Code</Form.Label>
-                          <Form.Control type="text" required value={row.code} onChange={(e) => handleRowChange(index, 'code', e.target.value)} />
-                        </Form.Group>
-                      </Col>
-                    )}
-
-                    {activeTab === 'colors' && (
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label className="fw-bold text-muted small text-uppercase">Hex Code</Form.Label>
-                          <div className="d-flex align-items-center gap-3">
-                            <Form.Control type="color" required value={row.hexCode} onChange={(e) => handleRowChange(index, 'hexCode', e.target.value)} style={{ width: '40px', height: '38px', padding: '0' }}/>
-                            <Form.Control type="text" required value={row.hexCode} onChange={(e) => handleRowChange(index, 'hexCode', e.target.value)} />
-                          </div>
-                        </Form.Group>
-                      </Col>
-                    )}
-                  </Row>
-                </Card.Body>
-              </Card>
-            ))}
-
-            {!editingId && (
-              <Button variant="outline-primary" size="sm" onClick={handleAddRow} className="fw-bold">
-                + Add Another Row
-              </Button>
+                </table>
+              </div>
             )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>Cancel</Button>
-            <Button variant="primary" type="submit" disabled={createLoading || updateLoading}>
-              {createLoading || updateLoading ? <Spinner size="sm" animation="border" /> : (editingId ? 'Update Record' : `Save ${formDataArray.length} Record(s)`)}
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
-    </Container>
+          </section>
+
+        </div>
+      </div>
+
+      {/* --- BULK ADD / EDIT MODAL --- */}
+      {showModal && (
+        <div className={styles['modal-backdrop']} onClick={() => !createLoading && !updateLoading && handleCloseModal()}>
+          <div className={`${styles['modal-content']} ${editingId ? styles['modal-content--sm'] : ''}`} onClick={(e) => e.stopPropagation()}>
+            
+            <div className={styles['modal-header']}>
+              <h3 className={styles['modal-title']}>{editingId ? 'Edit' : 'Bulk Add'} {activeTab}</h3>
+              <button className={styles['btn']} style={{ padding: 'var(--space-1)', background: 'transparent' }} onClick={handleCloseModal} disabled={createLoading || updateLoading}>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--color-neutral-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className={styles['modal-body']}>
+                {(createError || updateError) && (
+                  <div className={`${styles.alert} ${styles['alert--error']}`}>
+                    {createError || updateError}
+                  </div>
+                )}
+
+                {formDataArray.map((row, index) => (
+                  <div key={index} className={styles['row-card']}>
+                    
+                    {!editingId && formDataArray.length > 1 && (
+                      <div className={styles['row-card-header']}>
+                        <button type="button" className={`${styles.btn} ${styles['btn-text-danger']}`} onClick={() => handleRemoveRow(index)}>
+                          &times; Remove Row
+                        </button>
+                      </div>
+                    )}
+
+                    <div className={styles['form-grid']}>
+                      <div className={`${styles['form-group']} ${(activeTab === 'colors' || activeTab === 'sizes') ? '' : styles['form-grid-full']}`}>
+                        <label className={styles.label}>Name</label>
+                        <input type="text" className={styles.input} required value={row.name} onChange={(e) => handleRowChange(index, 'name', e.target.value)} />
+                      </div>
+
+                      {(activeTab === 'brands' || activeTab === 'categories') && (
+                        <div className={`${styles['form-group']} ${styles['form-grid-full']}`}>
+                          <label className={styles.label}>Description</label>
+                          <textarea className={styles.textarea} value={row.description} onChange={(e) => handleRowChange(index, 'description', e.target.value)} />
+                        </div>
+                      )}
+
+                      {activeTab === 'sizes' && (
+                        <div className={styles['form-group']}>
+                          <label className={styles.label}>Size Code</label>
+                          <input type="text" className={styles.input} required value={row.code} onChange={(e) => handleRowChange(index, 'code', e.target.value)} />
+                        </div>
+                      )}
+
+                      {activeTab === 'colors' && (
+                        <div className={styles['form-group']}>
+                          <label className={styles.label}>Hex Code</label>
+                          <div className={styles['color-picker-wrapper']}>
+                            <input type="color" className={styles['color-input']} required value={row.hexCode} onChange={(e) => handleRowChange(index, 'hexCode', e.target.value)} />
+                            <input type="text" className={styles.input} required value={row.hexCode} onChange={(e) => handleRowChange(index, 'hexCode', e.target.value)} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {!editingId && (
+                  <button type="button" className={`${styles.btn} ${styles['btn-dashed']}`} onClick={handleAddRow}>
+                    + Add Another Row
+                  </button>
+                )}
+              </div>
+
+              <div className={styles['modal-footer']}>
+                <button type="button" className={`${styles.btn} ${styles['btn-secondary']}`} onClick={handleCloseModal}>Cancel</button>
+                <button type="submit" className={`${styles.btn} ${styles['btn-primary']}`} disabled={createLoading || updateLoading}>
+                  {createLoading || updateLoading ? (
+                    <><div className={`${styles.spinner} ${styles['spinner--sm']} ${styles['spinner--light']}`}></div> Processing...</>
+                  ) : (
+                    editingId ? 'Update Record' : `Save ${formDataArray.length} Record(s)`
+                  )}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+    </main>
   );
 };
 

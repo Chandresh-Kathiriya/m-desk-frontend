@@ -1,0 +1,116 @@
+/* ==========================================================================
+   OrderSuccessPage Component Styles (Module)
+   Requires: theme.css
+   ========================================================================== */
+
+   .success-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--color-neutral-50);
+    padding: var(--space-6);
+}
+
+.success-card {
+    background-color: var(--color-neutral-0);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-neutral-200);
+    padding: var(--space-12) var(--space-8);
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    opacity: 0;
+    animation: slideUp 0.4s ease-out forwards;
+}
+
+/* --- Animated Checkmark --- */
+.icon-wrapper {
+    width: 88px;
+    height: 88px;
+    background-color: var(--color-success-100);
+    border-radius: var(--radius-full);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto var(--space-6);
+    color: var(--color-success-600);
+    transform: scale(0);
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s forwards;
+}
+
+.icon-wrapper svg {
+    width: 44px;
+    height: 44px;
+    stroke-width: 2.5;
+}
+
+/* --- Typography --- */
+.title {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-neutral-900);
+    margin-bottom: var(--space-3);
+    letter-spacing: -0.02em;
+}
+
+.message {
+    font-size: var(--text-lg);
+    color: var(--color-neutral-500);
+    margin-bottom: var(--space-8);
+    line-height: 1.5;
+}
+
+/* --- Loader Section --- */
+.redirect-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    background-color: var(--color-neutral-50);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-neutral-600);
+}
+
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-neutral-300);
+    border-top-color: var(--color-primary-600);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* --- Animations --- */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0);
+    }
+    80% {
+        transform: scale(1.1);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

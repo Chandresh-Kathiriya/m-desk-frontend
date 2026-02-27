@@ -28,7 +28,7 @@ import { orderListReducer, orderDetailsReducer, orderDeliverReducer } from './ad
 import { uploadImageReducer } from './admin/uploadReducers';
 import { reviewCreateReducer, reviewUpdateReducer, reviewVoteReducer, reviewReportReducer } from './storefront/reviewReducers';
 import { couponValidateReducer } from './user/couponReducers';
-import { orderListMyReducer, orderCreateReducer, userOrderDetailsReducer, orderVerifyReducer } from './user/orderReducers';
+import { orderListMyReducer, orderCreateReducer, userOrderDetailsReducer, orderVerifyReducer, stripeIntentReducer } from './user/orderReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -66,6 +66,7 @@ const rootReducer = combineReducers({
   couponValidate: couponValidateReducer,
   userOrderDetails: userOrderDetailsReducer,
   orderVerify: orderVerifyReducer,
+  stripeIntent: stripeIntentReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

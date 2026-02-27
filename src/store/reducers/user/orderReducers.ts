@@ -13,6 +13,10 @@ import {
     ORDER_VERIFY_REQUEST,
     ORDER_VERIFY_SUCCESS,
     ORDER_VERIFY_FAIL,
+    STRIPE_INTENT_REQUEST,
+    STRIPE_INTENT_SUCCESS,
+    STRIPE_INTENT_FAIL,
+    STRIPE_INTENT_RESET
 } from '../../constants/user/orderConstants';
 
 export const orderListMyReducer = (state = { orders: [] }, action: any) => {
@@ -66,6 +70,21 @@ export const orderVerifyReducer = (state = {}, action: any) => {
             return { loading: false, success: true };
         case ORDER_VERIFY_FAIL:
             return { loading: false, error: action.payload };
+        default:
+            return state;
+    }
+};
+
+export const stripeIntentReducer = (state = {}, action: any) => {
+    switch (action.type) {
+        case STRIPE_INTENT_REQUEST:
+            return { loading: true };
+        case STRIPE_INTENT_SUCCESS:
+            return { loading: false, success: true, clientSecret: action.payload };
+        case STRIPE_INTENT_FAIL:
+            return { loading: false, error: action.payload };
+        case STRIPE_INTENT_RESET:
+            return {};
         default:
             return state;
     }

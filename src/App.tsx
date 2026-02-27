@@ -16,17 +16,15 @@ import OrderSuccessPage from './modules/user/pages/OrderSuccessPage';
 import OrderDetailsPage from './modules/user/pages/OrderDetailsPage';
 
 // Admin Imports
-import AdminLogin from './modules/admin/pages/adminLogin';
-import AdminRegister from './modules/admin/pages/adminRegister';
+import AdminLogin from './modules/admin/pages/AdminLogin';
+import AdminRegister from './modules/admin/pages/AdminRegister';
 import AdminDashboardPage from './modules/admin/pages/AdminDashboardPage';
-import CategoryList from './modules/admin/pages/CategoryList';
 import ProductList from './modules/admin/pages/ProductList';
 import ProductForm from './modules/admin/pages/ProductForm';
-import CategoryForm from './modules/admin/pages/CategoryForm';
 import MasterDataManagement from './modules/admin/pages/MasterDataManagement';
 import InventoryManagement from './modules/admin/pages/InventoryManagement';
-import OrdersPage from './modules/admin/pages/OrdersPage';
-import AdminOrderDetailsPage from './modules/admin/pages/OrderDetailsPage';
+import OrdersPage from './modules/admin/pages/AdminOrdersPage';
+import AdminOrderDetailsPage from './modules/admin/pages/AdminOrderDetailsPage';
 import AdminCouponsPage from './modules/admin/pages/AdminCouponsPage';
 
 function App() {
@@ -55,10 +53,7 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin/products/new" element={<ProductForm />} />
           <Route path="/admin/products/:id/edit" element={<ProductForm />} />
-          <Route path="/admin/categories/new" element={<CategoryForm />} />
           <Route path="/admin/products" element={<ProductList />} />
-          <Route path="/admin/categories" element={<CategoryList />} />
-          <Route path="/admin/categories/:id/edit" element={<CategoryForm />} />
           <Route path="/admin/master-data" element={<MasterDataManagement />} />
           <Route path="/admin/inventory" element={<InventoryManagement />} />
           <Route path="/admin/orders" element={<OrdersPage />} />

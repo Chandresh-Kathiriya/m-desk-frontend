@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Table, Button, Spinner, Alert, Card, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { listAdminProducts, deleteProduct } from '../../../store/actions/admin/productActions';
 import { RootState } from '../../../store/reducers';
+
+import styles from '../../../schemas/css/ProductList.module.css';
 
 const ProductList: React.FC = () => {
   const dispatch = useDispatch<any>();
@@ -26,75 +27,100 @@ const ProductList: React.FC = () => {
   };
 
   return (
-    <Container className="py-4">
-      <Card className="shadow-sm border-top border-primary border-4">
-        <Card.Body>
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h3 className="mb-0">Product Catalog</h3>
-            <Button variant="primary" onClick={() => navigate('/admin/products/new')}>
+    <main className={styles['page-wrapper']}>
+      <div className={styles.container}>
+        
+        <div className={styles.card}>
+          <header className={styles['card-header']}>
+            <h1 className={styles['card-title']}>Product Catalog</h1>
+            <button className={`${styles.btn} ${styles['btn-primary']}`} onClick={() => navigate('/admin/products/new')}>
               + Add New Product
-            </Button>
-          </div>
+            </button>
+          </header>
 
           {loading ? (
-            <Spinner animation="border" className="d-block mx-auto my-5" />
+            <div className={styles['state-container']}>
+              <div className={styles.spinner}></div>
+            </div>
           ) : error ? (
-            <Alert variant="danger">{error}</Alert>
+            <div className={`${styles.alert} ${styles['alert--error']}`}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>{error}</span>
+            </div>
           ) : (
-            <Table responsive hover className="align-middle bg-white">
-              <thead className="table-light">
-                <tr>
-                  <th>Product Name</th>
-                  <th>Category</th>
-                  <th>Brand</th>
-                  <th>Type</th>
-                  <th>Variants (SKUs)</th>
-                  <th>Status</th>
-                  <th className="text-end">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products && products.map((product: any) => (
-                  <tr key={product._id}>
-                    <td className="fw-bold">{product.productName}</td>
-                    <td>{product.productCategory?.name || '-'}</td>
-                    <td>{product.brand?.name || '-'}</td>
-                    <td><Badge bg="info" className="text-dark">{product.productType}</Badge></td>
-                    <td>
-                      <Badge bg="secondary" pill>
-                        {product.variants?.length || 0} SKUs
-                      </Badge>
-                    </td>
-                    <td>
-                      {product.published ? (
-                        <Badge bg="success">Published</Badge>
-                      ) : (
-                        <Badge bg="warning" text="dark">Draft</Badge>
-                      )}
-                    </td>
-                    <td className="text-end">
-                      <Button variant="outline-primary" size="sm" className="me-2" onClick={() => navigate(`/admin/products/${product._id}/edit`)}>
-                        Edit
-                      </Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => deleteHandler(product._id)}>
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {(!products || products.length === 0) && (
+            <div className={styles['table-responsive']}>
+              <table className={styles['admin-table']}>
+                <thead>
                   <tr>
-                    <td colSpan={7} className="text-center text-muted py-4">
-                      No products found. Start by creating a new one!
-                    </td>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th>Brand</th>
+                    <th>Type</th>
+                    <th className={styles['align-center']}>Variants (SKUs)</th>
+                    <th className={styles['align-center']}>Status</th>
+                    <th className={styles['align-right']}>Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {products && products.map((product: any) => (
+                    <tr key={product._id}>
+                      <td className={styles['text-product-name']}>{product.productName}</td>
+                      <td>{product.productCategory?.name || '-'}</td>
+                      <td>{product.brand?.name || '-'}</td>
+                      <td>
+                        <span className={`${styles.badge} ${styles['badge--info']}`}>
+                          {product.productType}
+                        </span>
+                      </td>
+                      <td className={styles['align-center']}>
+                        <span className={`${styles.badge} ${styles['badge--dark']} ${styles['badge--pill']}`}>
+                          {product.variants?.length || 0} SKUs
+                        </span>
+                      </td>
+                      <td className={styles['align-center']}>
+                        {product.published ? (
+                          <span className={`${styles.badge} ${styles['badge--success']}`}>Published</span>
+                        ) : (
+                          <span className={`${styles.badge} ${styles['badge--warning']}`}>Draft</span>
+                        )}
+                      </td>
+                      <td className={styles['align-right']}>
+                        <div className={styles['action-group']}>
+                          <button 
+                            className={`${styles.btn} ${styles['btn-outline-primary']}`} 
+                            onClick={() => navigate(`/admin/products/${product._id}/edit`)}
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            className={`${styles.btn} ${styles['btn-outline-danger']}`} 
+                            onClick={() => deleteHandler(product._id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!products || products.length === 0) && (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)' }} className="text-muted">
+                        No products found. Start by creating a new one!
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
-        </Card.Body>
-      </Card>
-    </Container>
+        </div>
+        
+      </div>
+    </main>
   );
 };
 

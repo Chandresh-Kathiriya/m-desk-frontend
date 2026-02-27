@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Spinner, Alert, Button, Badge, Form, ListGroup } from 'react-bootstrap';
 import { getStorefrontProductDetails } from '../../../store/actions/storefront/productActions';
 import { addToCart } from '../../../store/actions/user/cartActions';
 import { listMyOrders } from '../../../store/actions/user/orderActions';
 import { createReview, updateReview, voteReview, reportReview } from '../../../store/actions/storefront/reviewActions';
 import { REVIEW_CREATE_RESET, REVIEW_UPDATE_RESET, REVIEW_VOTE_RESET, REVIEW_REPORT_RESET } from '../../../store/constants/storefront/reviewConstants';
 import { RootState } from '../../../store/reducers';
-import Rating from '../../../common/components/Rating';
+import Rating from '../../../common/components/Rating'; 
+
+// Import CSS Module
+import styles from '../../../schemas/css/ProductDetailsPage.module.css';
 
 const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -49,14 +51,10 @@ const ProductDetailsPage: React.FC = () => {
   const [hasPurchased, setHasPurchased] = useState(false);
   const [qty, setQty] = useState<number>(1);
 
-  // Fetch Product
   useEffect(() => {
-    if (id) {
-      dispatch(getStorefrontProductDetails(id));
-    }
+    if (id) dispatch(getStorefrontProductDetails(id));
   }, [dispatch, id]);
 
-  // Handle Review Successes to Refresh Data
   useEffect(() => {
     if (successCreateReview) {
       alert('Review submitted successfully!');
@@ -81,19 +79,16 @@ const ProductDetailsPage: React.FC = () => {
       alert('Review reported to administrators.');
       dispatch({ type: REVIEW_REPORT_RESET });
     }
-    // Handle Errors gracefully
     if (errorVote) alert(errorVote);
     if (errorReport) alert(errorReport);
   }, [dispatch, id, successCreateReview, successUpdateReview, successVote, successReport, errorVote, errorReport]);
 
-  // Fetch My Orders to verify purchase
   useEffect(() => {
     if (userInfo && userInfo.token && product?._id) {
       dispatch(listMyOrders());
     }
   }, [dispatch, userInfo, product]);
 
-  // Evaluate Purchase History
   useEffect(() => {
     if (myOrders && myOrders.length > 0 && product?._id) {
       const boughtIt = myOrders.some((order: any) =>
@@ -103,7 +98,6 @@ const ProductDetailsPage: React.FC = () => {
     }
   }, [myOrders, product]);
 
-  // Auto-select the first available variant when the product loads
   useEffect(() => {
     if (product && product.variants && product.variants.length > 0) {
       const firstAvailable = product.variants.find((v: any) => v.stock > 0) || product.variants[0];
@@ -125,17 +119,15 @@ const ProductDetailsPage: React.FC = () => {
   useEffect(() => {
     if (displayImages.length > 0) {
       const isMainImageValid = displayImages.some((img: any) => img.url === mainImage);
-      if (!isMainImageValid) {
-        setMainImage(displayImages[0].url);
-      }
+      if (!isMainImageValid) setMainImage(displayImages[0].url);
     }
   }, [selectedColor, product, mainImage, displayImages]);
 
-  if (loading) return <div className="text-center mt-5"><Spinner animation="border" /></div>;
-  if (error) return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
+  if (loading) return <div className={styles['state-container']}><div className={styles.spinner}></div></div>;
+  if (error) return <div className="container mt-8"><div className={`${styles['state-container']} ${styles['state-container--error']}`}><p className={styles['state-message']}>{error}</p></div></div>;
   if (!product || !product._id) return null;
 
-  // --- SMART UI HELPERS ---
+  // Helpers
   const uniqueColors = Array.from(new Set(product.variants.map((v: any) => v.color))) as string[];
   const uniqueSizes = Array.from(new Set(product.variants.map((v: any) => v.size))) as string[];
 
@@ -187,7 +179,7 @@ const ProductDetailsPage: React.FC = () => {
     setEditingReviewId(review._id);
     setRating(review.rating);
     setComment(review.comment);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const sortedReviews = product?.reviews ? [...product.reviews].sort((a: any, b: any) => {
@@ -197,309 +189,303 @@ const ProductDetailsPage: React.FC = () => {
   }) : [];
 
   return (
-    <Container className="py-5">
-      <Link to="/" className="text-decoration-none text-muted mb-4 d-inline-block">
-        &larr; Back to Shop
-      </Link>
+    <main className={styles['product-page']}>
+      <div className={`container ${styles['product-page__container']}`}>
+        
+        {/* Breadcrumb */}
+        <nav className={styles.breadcrumb}>
+          <Link to="/" className={styles['breadcrumb__link']}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back to Shop
+          </Link>
+          <span className={styles['breadcrumb__divider']}>/</span>
+          <span className={styles['breadcrumb__current']}>{product.productCategory?.name}</span>
+        </nav>
 
-      <Row className="g-5">
-        {/* LEFT COLUMN: Image Gallery */}
-        <Col md={6}>
-          <div className="bg-white border rounded p-3 mb-3 text-center" style={{ height: '500px' }}>
-            <img
-              src={mainImage || 'https://via.placeholder.com/500?text=No+Image'}
-              alt={product.productName}
-              style={{ objectFit: 'contain', width: '100%', height: '100%' }}
-            />
-          </div>
+        {/* Product Split Layout */}
+        <div className={styles['product-layout']}>
+          
+          {/* LEFT: Image Gallery */}
+          <section className={styles['product-gallery']}>
+            <figure className={styles['product-gallery__main-wrapper']}>
+              <img
+                src={mainImage || 'https://via.placeholder.com/600x750?text=No+Image'}
+                alt={product.productName}
+                className={styles['product-gallery__main-img']}
+              />
+            </figure>
 
-          {displayImages && displayImages.length > 1 && (
-            <div className="d-flex gap-2 overflow-auto mt-2">
-              {displayImages.map((img: any, idx: number) => (
-                <div
-                  key={idx}
-                  className={`border rounded p-1 ${mainImage === img.url ? 'border-primary border-2 shadow-sm' : ''}`}
-                  style={{ width: '80px', height: '80px', cursor: 'pointer', transition: 'all 0.2s' }}
-                  onClick={() => setMainImage(img.url)}
-                >
-                  <img src={img.url} alt={`${selectedColor} view`} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
-                </div>
-              ))}
-            </div>
-          )}
-        </Col>
-
-        {/* RIGHT COLUMN: Product Info & Selectors */}
-        <Col md={6}>
-          <div className="text-uppercase text-muted mb-2" style={{ letterSpacing: '1px', fontSize: '0.85rem' }}>
-            {product.brand?.name || 'Exclusive Brand'}
-          </div>
-          <h1 className="fw-bold mb-3">{product.productName}</h1>
-
-          <div className="mb-3">
-            <Rating value={product.rating} text={`${product.numReviews} reviews`} />
-          </div>
-
-          <h2 className="text-primary fw-bold mb-4">
-            ₹{currentVariant ? getVariantPrice(currentVariant) : '---'}
-          </h2>
-
-          <div className="mb-4">
-            <span className="text-muted me-3">Category: <span className="text-dark">{product.productCategory?.name}</span></span>
-            <span className="text-muted">Material: <span className="text-dark">{product.material}</span></span>
-          </div>
-
-          <hr />
-
-          {/* Color Selector */}
-          <div className="mb-4 mt-4">
-            <h6 className="fw-bold text-uppercase mb-3">Color: <span className="text-primary text-capitalize">{selectedColor}</span></h6>
-            <div className="d-flex gap-2">
-              {uniqueColors.map((color) => (
-                <Button
-                  key={color}
-                  variant={selectedColor === color ? 'dark' : 'outline-dark'}
-                  className="text-capitalize"
-                  onClick={() => setSelectedColor(color)}
-                >
-                  {color}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Size Selector */}
-          <div className="mb-4">
-            <h6 className="fw-bold text-uppercase mb-3">Size: <span className="text-primary text-uppercase">{selectedSize}</span></h6>
-            <div className="d-flex gap-2 flex-wrap">
-              {uniqueSizes.map((size) => {
-                const isAvailable = isSizeAvailableForColor(size);
-                return (
-                  <Button
-                    key={size}
-                    variant={selectedSize === size ? 'primary' : 'outline-secondary'}
-                    disabled={!isAvailable}
-                    className="text-uppercase"
-                    style={{ minWidth: '60px' }}
-                    onClick={() => setSelectedSize(size)}
+            {displayImages && displayImages.length > 1 && (
+              <div className={styles['product-gallery__thumbnails']}>
+                {displayImages.map((img: any, idx: number) => (
+                  <button
+                    key={idx}
+                    className={`${styles['product-gallery__thumb-btn']} ${mainImage === img.url ? styles['product-gallery__thumb-btn--active'] : ''}`}
+                    onClick={() => setMainImage(img.url)}
                   >
-                    {size}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Stock Status */}
-          <div className="mb-4">
-            {currentVariant && currentVariant.stock > 0 ? (
-              <Badge bg="success" className="p-2 fs-6">In Stock ({currentVariant.stock} available)</Badge>
-            ) : (
-              <Badge bg="danger" className="p-2 fs-6">Out of Stock</Badge>
-            )}
-            {currentVariant && <div className="text-muted small mt-2">SKU: {currentVariant.sku}</div>}
-          </div>
-
-          {/* Quantity & Add to Cart */}
-          {currentVariant && currentVariant.stock > 0 ? (
-            <Row className="mt-4 align-items-center">
-              <Col xs={4} md={3}>
-                <Form.Select
-                  value={qty}
-                  onChange={(e) => setQty(Number(e.target.value))}
-                  className="py-3 fw-bold text-center"
-                >
-                  {[...Array(Math.min(currentVariant.stock, 10)).keys()].map((x) => (
-                    <option key={x + 1} value={x + 1}>
-                      {x + 1}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Col>
-              <Col xs={8} md={9}>
-                <Button
-                  variant="dark"
-                  size="lg"
-                  className="w-100 py-3 fw-bold text-uppercase"
-                  onClick={addToCartHandler}
-                >
-                  Add to Cart
-                </Button>
-              </Col>
-            </Row>
-          ) : (
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-100 py-3 mt-4 fw-bold text-uppercase"
-              disabled
-            >
-              Currently Unavailable
-            </Button>
-          )}
-        </Col>
-      </Row>
-
-      {/* --- PRODUCT REVIEWS SECTION --- */}
-      <Row className="mt-5 g-5 border-top pt-5">
-        <Col md={7}>
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <h3 className="fw-bold mb-0">Customer Reviews</h3>
-            <Form.Select
-              size="sm"
-              style={{ width: '180px' }}
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="shadow-sm border-0 bg-light"
-            >
-              <option value="latest">Sort by Latest</option>
-              <option value="helpful">Sort by Most Helpful</option>
-              <option value="highest">Sort by Highest Rating</option>
-            </Form.Select>
-          </div>
-
-          {sortedReviews.length === 0 && (
-            <div className="alert alert-info shadow-sm">No reviews yet. Be the first to review this product!</div>
-          )}
-
-          <ListGroup variant="flush">
-            {sortedReviews.map((review: any) => {
-              const isOwner = userInfo && (userInfo._id === review.user || userInfo.id === review.user);
-
-              return (
-                <ListGroup.Item key={review._id} className="px-0 py-4 bg-transparent border-bottom">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <strong className="fs-5 me-2">{review.name}</strong>
-                      {review.isVerifiedPurchase && (
-                        <Badge bg="success" className="bg-opacity-75 rounded-pill fw-normal shadow-sm">
-                          <i className="bi bi-patch-check-fill me-1"></i>Verified Purchase
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-end">
-                      <span className="text-muted small d-block">{new Date(review.createdAt).toLocaleDateString()}</span>
-                      {review.isEdited && <span className="text-muted small fst-italic">(Edited)</span>}
-                    </div>
-                  </div>
-
-                  <Rating value={review.rating} />
-                  <p className="mt-3 mb-3 text-secondary lh-lg">{review.comment}</p>
-
-                  <div className="d-flex align-items-center small mt-2">
-                    <span className="text-muted me-3">Was this helpful?</span>
-
-                    <button
-                      className="btn btn-sm btn-outline-success border-0 me-2"
-                      onClick={() => handleVote(review._id, 'helpful')}
-                      disabled={isOwner || loadingVoteId === review._id}
-                    >
-                      <i className="bi bi-hand-thumbs-up me-1"></i> {review.helpfulVotes || 0}
-                    </button>
-
-                    <button
-                      className="btn btn-sm btn-outline-danger border-0 me-4"
-                      onClick={() => handleVote(review._id, 'unhelpful')}
-                      disabled={isOwner || loadingVoteId === review._id}
-                    >
-                      <i className="bi bi-hand-thumbs-down me-1"></i> {review.unhelpfulVotes || 0}
-                    </button>
-
-                    <span className="text-muted me-3">|</span>
-
-                    <button
-                      className="btn btn-sm btn-link text-muted text-decoration-none p-0 me-3"
-                      onClick={() => handleReport(review._id)}
-                      disabled={isOwner || loadingReportId === review._id}
-                    >
-                      <i className="bi bi-flag me-1"></i> Report
-                    </button>
-
-                    {isOwner && (
-                      <button
-                        className="btn btn-sm btn-link text-primary text-decoration-none p-0"
-                        onClick={() => handleEditClick(review)}
-                      >
-                        <i className="bi bi-pencil-square me-1"></i> Edit
-                      </button>
-                    )}
-                  </div>
-                </ListGroup.Item>
-              );
-            })}
-          </ListGroup>
-        </Col>
-
-        {/* --- WRITE / EDIT REVIEW FORM --- */}
-        {!userInfo && (
-          <div className="alert alert-warning shadow-sm mb-0">
-            Please <Link to="/login" className="fw-bold text-dark">sign in</Link> to write a review.
-          </div>
-        )}
-
-        {userInfo && !hasPurchased && (
-          <div className="alert alert-info shadow-sm mb-0">
-            <i className="bi bi-lock-fill me-2"></i>
-            Only verified buyers can review this item. Purchase this product to unlock reviews!
-          </div>
-        )}
-
-        {userInfo && hasPurchased && (
-          <Form onSubmit={submitReviewHandler}>
-            {errorCreateReview && <Alert variant="danger">{errorCreateReview}</Alert>}
-            {errorUpdateReview && <Alert variant="danger">{errorUpdateReview}</Alert>}
-            
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold text-muted small text-uppercase d-block mb-2">
-                Your Rating
-              </Form.Label>
-              <div className="d-flex align-items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <i
-                    key={star}
-                    className={`bi ${star <= (hover || rating) ? 'bi-star-fill text-warning' : 'bi-star text-secondary'}`}
-                    style={{ fontSize: '1.8rem', cursor: 'pointer', marginRight: '8px', transition: 'color 0.2s' }}
-                    onClick={() => setRating(star)}
-                    onMouseEnter={() => setHover(star)}
-                    onMouseLeave={() => setHover(0)}
-                  ></i>
+                    <img src={img.url} alt={`${selectedColor} view`} className={styles['product-gallery__thumb-img']} />
+                  </button>
                 ))}
               </div>
-            </Form.Group>
+            )}
+          </section>
 
-            <Form.Group className="mb-4" controlId="comment">
-              <Form.Label className="fw-bold text-muted small text-uppercase">Comment</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={4}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                required
-                placeholder="What did you like or dislike about this product?"
-                className="border-0 shadow-sm"
-              ></Form.Control>
-            </Form.Group>
-
-            <div className="d-flex gap-2">
-              <Button disabled={loadingCreateReview || loadingUpdateReview} type="submit" variant="dark" className="w-100 py-2 fw-bold text-uppercase shadow-sm">
-                {loadingCreateReview || loadingUpdateReview ? <Spinner animation="border" size="sm" /> : (editingReviewId ? "Update Review" : "Submit Review")}
-              </Button>
-
-              {editingReviewId && (
-                <Button
-                  type="button"
-                  variant="outline-secondary"
-                  className="py-2 fw-bold"
-                  onClick={() => { setEditingReviewId(null); setRating(0); setComment(''); }}
-                >
-                  Cancel
-                </Button>
-              )}
+          {/* RIGHT: Product Meta & Add to Cart */}
+          <section className={styles['product-meta']}>
+            
+            <div className={styles['product-meta__header']}>
+              <span className={styles['product-meta__brand']}>{product.brand?.name || 'Exclusive Brand'}</span>
+              <h1 className={styles['product-meta__title']}>{product.productName}</h1>
+              
+              <div className={styles['product-meta__price-row']}>
+                <span className={styles['product-meta__price']}>
+                  ₹{currentVariant ? getVariantPrice(currentVariant) : '---'}
+                </span>
+                <div className={styles['product-meta__rating']}>
+                  <Rating value={product.rating} />
+                  <span className={styles['product-meta__review-count']}>({product.numReviews})</span>
+                </div>
+              </div>
             </div>
-          </Form>
-        )}
-      </Row>
-    </Container>
+
+            <p className={styles['product-meta__material']}>
+              <span className={styles['product-meta__label']}>Material:</span> {product.material}
+            </p>
+
+            <hr className={styles.divider} />
+
+            {/* Color Selector */}
+            <div className={styles['variant-section']}>
+              <div className={styles['variant-section__header']}>
+                <span className={styles['variant-section__title']}>Color</span>
+                <span className={styles['variant-section__selected-value']}>{selectedColor}</span>
+              </div>
+              <div className={styles['variant-list']}>
+                {uniqueColors.map((color) => (
+                  <button
+                    key={color}
+                    className={`${styles['variant-swatch']} ${selectedColor === color ? styles['variant-swatch--active'] : ''}`}
+                    onClick={() => setSelectedColor(color)}
+                    title={color}
+                  >
+                    <span 
+                      className={styles['variant-swatch__inner']} 
+                      style={{ 
+                        backgroundColor: color.toLowerCase() === 'white' ? '#f8f9fa' : color.toLowerCase(),
+                        boxShadow: color.toLowerCase() === 'white' ? 'inset 0 2px 4px rgba(0,0,0,0.06)' : 'none'
+                      }}>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Size Selector */}
+            <div className={styles['variant-section']}>
+              <div className={styles['variant-section__header']}>
+                <span className={styles['variant-section__title']}>Size</span>
+                <span className={styles['variant-section__selected-value']}>{selectedSize}</span>
+              </div>
+              <div className={styles['variant-list']}>
+                {uniqueSizes.map((size) => {
+                  const isAvailable = isSizeAvailableForColor(size);
+                  return (
+                    <button
+                      key={size}
+                      className={`${styles['variant-size']} ${selectedSize === size ? styles['variant-size--active'] : ''}`}
+                      disabled={!isAvailable}
+                      onClick={() => setSelectedSize(size)}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Stock Status & Actions */}
+            <div className={styles['product-actions']}>
+              <div className={styles['product-actions__status']}>
+                {currentVariant && currentVariant.stock > 0 ? (
+                  <span className={`${styles['status-text']} ${styles['status-text--success']}`}>Available in Stock</span>
+                ) : (
+                  <span className={`${styles['status-text']} ${styles['status-text--error']}`}>Out of Stock</span>
+                )}
+              </div>
+
+              {currentVariant && currentVariant.stock > 0 ? (
+                <div className={styles['product-actions__cart-row']}>
+                  <div className={styles['custom-select-wrapper']}>
+                    <select
+                      value={qty}
+                      onChange={(e) => setQty(Number(e.target.value))}
+                      className={styles['custom-select']}
+                    >
+                      {[...Array(Math.min(currentVariant.stock, 10)).keys()].map((x) => (
+                        <option key={x + 1} value={x + 1}>
+                          {x + 1}
+                        </option>
+                      ))}
+                    </select>
+                    <svg className={styles['custom-select-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </div>
+                  
+                  <button
+                    className={`${styles.btn} ${styles['btn--primary']} ${styles['btn--full']} ${styles['product-actions__add-btn']}`}
+                    onClick={addToCartHandler}
+                  >
+                    Add to Cart
+                  </button>
+                </div>
+              ) : (
+                <button className={`${styles.btn} ${styles['btn--secondary']} ${styles['btn--full']} ${styles['product-actions__add-btn']}`} disabled>
+                  Currently Unavailable
+                </button>
+              )}
+              
+              <p className={styles['product-meta__secure-text']}>
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                 Secure checkout & easy returns
+              </p>
+            </div>
+
+          </section>
+        </div>
+
+        {/* --- PRODUCT REVIEWS SECTION --- */}
+        <section className={styles['reviews-section']} id="review-form">
+          <header className={styles['reviews-section__header']}>
+            <h2 className={styles['reviews-section__title']}>Customer Reviews</h2>
+            <div className={`${styles['custom-select-wrapper']} ${styles['reviews-section__sort']}`}>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className={`${styles['custom-select']} ${styles['custom-select--sm']}`}
+              >
+                <option value="latest">Sort by Latest</option>
+                <option value="helpful">Sort by Most Helpful</option>
+                <option value="highest">Sort by Highest Rating</option>
+              </select>
+              <svg className={styles['custom-select-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </header>
+
+          <div className={styles['reviews-layout']}>
+            
+            <div className={styles['reviews-list-container']}>
+              {sortedReviews.length === 0 && (
+                <div className={`${styles['state-container']} ${styles['state-container--empty']} p-4`}>
+                  <p className={styles['state-message']}>No reviews yet. Be the first to review this product!</p>
+                </div>
+              )}
+
+              <ul className={styles['review-list']}>
+                {sortedReviews.map((review: any) => {
+                  const isOwner = userInfo && (userInfo._id === review.user || userInfo.id === review.user);
+
+                  return (
+                    <li key={review._id} className={styles['review-card']}>
+                      <div className={styles['review-card__header']}>
+                        <div className={styles['review-card__author']}>
+                          <strong className={styles['review-card__name']}>{review.name}</strong>
+                          {review.isVerifiedPurchase && (
+                            <span className={styles['verified-badge']}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                              Verified Buyer
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles['review-card__meta']}>
+                          <span className={styles['review-card__date']}>{new Date(review.createdAt).toLocaleDateString()}</span>
+                          {review.isEdited && <span className={styles['review-card__edited']}>(Edited)</span>}
+                        </div>
+                      </div>
+
+                      <div className={styles['review-card__rating']}>
+                         <Rating value={review.rating} />
+                      </div>
+                      
+                      <p className={styles['review-card__comment']}>{review.comment}</p>
+
+                      <div className={styles['review-card__actions']}>
+                        <button className={`${styles['review-btn']} ${styles['review-btn--vote']}`} onClick={() => handleVote(review._id, 'helpful')} disabled={isOwner || loadingVoteId === review._id}>
+                          Helpful ({review.helpfulVotes || 0})
+                        </button>
+                        <span className={styles['review-card__actions-divider']}>·</span>
+                        <button className={`${styles['review-btn']} ${styles['review-btn--text']}`} onClick={() => handleReport(review._id)} disabled={isOwner || loadingReportId === review._id}>
+                          Report
+                        </button>
+
+                        {isOwner && (
+                          <button className={`${styles['review-btn']} ${styles['review-btn--text']} ${styles['review-btn--edit']}`} onClick={() => handleEditClick(review)}>
+                            Edit
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <aside className={styles['review-form-container']}>
+              <div className={styles['review-form-card']}>
+                <h3 className={styles['review-form-card__title']}>
+                  {editingReviewId ? 'Edit Your Review' : 'Write a Review'}
+                </h3>
+                
+                {!userInfo ? (
+                  <p className="text-muted text-sm">Please <Link to="/login" className="text-primary fw-bold">sign in</Link> to write a review.</p>
+                ) : !hasPurchased ? (
+                  <p className="text-muted text-sm">Only verified buyers can review this item.</p>
+                ) : (
+                  <form onSubmit={submitReviewHandler} className={styles['review-form']}>
+                    {errorCreateReview && <div className={`${styles['state-container']} ${styles['state-container--error']} mb-3`}><p className={styles['state-message']}>{errorCreateReview}</p></div>}
+                    {errorUpdateReview && <div className={`${styles['state-container']} ${styles['state-container--error']} mb-3`}><p className={styles['state-message']}>{errorUpdateReview}</p></div>}
+                    
+                    <div className={styles['form-group']}>
+                      <label className={styles['form-label']}>Rating</label>
+                      <div className={styles['interactive-rating']}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg
+                            key={star}
+                            className={`${styles['interactive-rating__star']} ${star <= (hover || rating) ? styles['interactive-rating__star--active'] : ''}`}
+                            viewBox="0 0 24 24"
+                            onClick={() => setRating(star)}
+                            onMouseEnter={() => setHover(star)}
+                            onMouseLeave={() => setHover(0)}
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                          </svg>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={styles['form-group']}>
+                      <label htmlFor="comment" className={styles['form-label']}>Review</label>
+                      <textarea id="comment" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} required className={styles['form-input']}></textarea>
+                    </div>
+
+                    <div className={styles['review-form__actions']}>
+                      <button disabled={loadingCreateReview || loadingUpdateReview} type="submit" className={`${styles.btn} ${styles['btn--primary']} ${styles['btn--full']}`}>
+                        {loadingCreateReview || loadingUpdateReview ? 'Processing...' : (editingReviewId ? "Update" : "Submit")}
+                      </button>
+                      {editingReviewId && (
+                        <button type="button" className={`${styles.btn} ${styles['btn--secondary']} ${styles['btn--full']} mt-2`} onClick={() => { setEditingReviewId(null); setRating(0); setComment(''); }}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                )}
+              </div>
+            </aside>
+
+          </div>
+        </section>
+
+      </div>
+    </main>
   );
 };
 

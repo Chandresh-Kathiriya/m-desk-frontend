@@ -1,0 +1,241 @@
+/* ==========================================================================
+   Premium Footer Component Styles (Module)
+   Requires: theme.css
+   ========================================================================== */
+
+/* --- Base Button included for self-containment --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background-color: var(--color-primary-600);
+  color: var(--color-neutral-0);
+}
+
+.btn--primary:hover {
+  background-color: var(--color-primary-700);
+}
+
+/* --- Footer Layout --- */
+.footer {
+  background-color: var(--color-neutral-900);
+  color: var(--color-neutral-0);
+  margin-top: auto; /* Pushes footer to bottom if page content is short */
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-neutral-800);
+}
+
+.footer__container {
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+}
+
+/* --- Main Layout Grid --- */
+.footer__main {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 2fr;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+/* --- Typography & Content --- */
+.footer__brand-name {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-4);
+  letter-spacing: -0.02em;
+}
+
+.footer__title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-neutral-400);
+  margin-bottom: var(--space-6);
+}
+
+.footer__text {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-neutral-300);
+  margin-bottom: var(--space-6);
+  max-width: 320px;
+}
+
+.footer__text--small {
+  margin-bottom: var(--space-4);
+}
+
+/* --- Social Links --- */
+.footer__socials {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.footer__social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-neutral-800);
+  color: var(--color-neutral-0);
+  transition: all var(--transition-fast);
+}
+
+.footer__social-link:hover {
+  background-color: var(--color-primary-600);
+  transform: translateY(-2px);
+}
+
+/* --- Navigation Lists --- */
+.footer__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.footer__link {
+  text-decoration: none;
+  color: var(--color-neutral-300);
+  font-size: var(--text-sm);
+  transition: color var(--transition-fast);
+  display: inline-block;
+}
+
+.footer__link:hover {
+  color: var(--color-neutral-0);
+}
+
+/* --- Newsletter Form --- */
+.footer__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 100%;
+}
+
+.footer__input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-700);
+  background-color: var(--color-neutral-800);
+  color: var(--color-neutral-0);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.footer__input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+}
+
+.footer__input::placeholder {
+  color: var(--color-neutral-500);
+}
+
+.footer__btn {
+  width: 100%;
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+}
+
+/* --- Bottom Bar --- */
+.footer__bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--color-neutral-800);
+  text-align: center;
+}
+
+.footer__copyright {
+  font-size: var(--text-xs);
+  color: var(--color-neutral-500);
+}
+
+.footer__legal {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.footer__legal-link {
+  text-decoration: none;
+  font-size: var(--text-xs);
+  color: var(--color-neutral-500);
+  transition: color var(--transition-fast);
+}
+
+.footer__legal-link:hover {
+  color: var(--color-neutral-300);
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .footer__main {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-8) var(--space-4);
+  }
+  
+  .footer__column--brand,
+  .footer__column--newsletter {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 768px) {
+  .footer__bottom {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+  }
+  
+  .footer__form {
+    flex-direction: row;
+  }
+  
+  .footer__btn {
+    width: auto;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer__main {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  .footer__column--brand,
+  .footer__column--newsletter {
+    grid-column: span 1;
+  }
+  
+  .footer__text {
+    max-width: 100%;
+  }
+}

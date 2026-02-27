@@ -10,7 +10,7 @@ export const uploadImageReducer = (state = {}, action: any) => {
         case UPLOAD_IMAGE_REQUEST:
             return { loading: true };
         case UPLOAD_IMAGE_SUCCESS:
-            return { loading: false, success: true, imageUrl: action.payload };
+            return { loading: false, success: true, uploadedImages: action.payload };
         case UPLOAD_IMAGE_FAIL:
             return { loading: false, error: action.payload };
         case UPLOAD_IMAGE_RESET:

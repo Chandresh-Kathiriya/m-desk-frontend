@@ -12,6 +12,9 @@ import {
     ORDER_VERIFY_REQUEST,
     ORDER_VERIFY_SUCCESS,
     ORDER_VERIFY_FAIL,
+    STRIPE_INTENT_REQUEST,
+    STRIPE_INTENT_SUCCESS,
+    STRIPE_INTENT_FAIL,
 } from '../../constants/user/orderConstants';
 
 export const listMyOrders = () => async (dispatch: any, getState: any) => {
@@ -91,6 +94,27 @@ export const verifyOrderPayment = (paymentIntentId: string) => async (dispatch: 
     } catch (error: any) {
         dispatch({
             type: ORDER_VERIFY_FAIL,
+            payload: error.response?.data?.message || error.message,
+        });
+    }
+};
+
+export const createStripeIntent = (totalPrice: number) => async (dispatch: any, getState: any) => {
+    try {
+        dispatch({ type: STRIPE_INTENT_REQUEST });
+
+        const { userAuth: { userInfo } } = getState();
+        const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+        const { data } = await axios.post('/api/orders/stripe-intent', { totalPrice }, config);
+
+        dispatch({
+            type: STRIPE_INTENT_SUCCESS,
+            payload: data.clientSecret, // Pass the secret to the reducer!
+        });
+    } catch (error: any) {
+        dispatch({
+            type: STRIPE_INTENT_FAIL,
             payload: error.response?.data?.message || error.message,
         });
     }

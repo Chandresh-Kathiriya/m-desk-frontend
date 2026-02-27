@@ -1,0 +1,486 @@
+/* ==========================================================================
+   HomePage Component Styles (Cleaned & Enhanced UI)
+   Requires: theme.css
+   ========================================================================== */
+
+/* --- Base Page Layout --- */
+.home-page {
+    background-color: var(--color-neutral-50);
+    min-height: 100vh;
+    padding: var(--space-8) 0 var(--space-16);
+}
+
+.container {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+}
+
+/* --- Shared Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+}
+
+.btn--primary {
+    background-color: var(--color-primary-600);
+    color: var(--color-neutral-0);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn--primary:hover {
+    background-color: var(--color-primary-700);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.btn--secondary {
+    background-color: var(--color-neutral-0);
+    color: var(--color-neutral-900);
+}
+
+.btn--secondary:hover {
+    background-color: var(--color-neutral-100);
+}
+
+.btn--full {
+    width: 100%;
+}
+
+/* --- Header & View Controls --- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: var(--space-8);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.page-header__info {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+}
+
+.page-header__title {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-neutral-900);
+    line-height: 1;
+}
+
+.page-header__count {
+    font-size: var(--text-sm);
+    color: var(--color-neutral-500);
+    font-weight: var(--font-weight-medium);
+}
+
+.view-controls {
+    display: flex;
+    gap: var(--space-2);
+    background-color: var(--color-neutral-100);
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+}
+
+.view-controls__btn {
+    background: transparent;
+    border: none;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--color-neutral-500);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.view-controls__btn:hover {
+    color: var(--color-neutral-900);
+}
+
+.view-controls__btn--active {
+    background-color: var(--color-neutral-0);
+    color: var(--color-primary-600);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   THE PRODUCT CARD (Base Styles)
+   ========================================================================== */
+.product-card {
+    background-color: var(--color-neutral-0);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+    position: relative;
+    border: 1px solid var(--color-neutral-200);
+    display: flex;
+    width: 100%;
+}
+
+.product-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+}
+
+.product-card__link {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.product-card__image-wrapper {
+    position: relative;
+    background-color: var(--color-neutral-50); /* Softer background for images */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-card__image {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.4s ease; /* Smoother, slightly slower zoom */
+}
+
+.product-card:hover .product-card__image {
+    transform: scale(1.08);
+}
+
+.product-card__badge {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    background-color: var(--color-neutral-900);
+    color: var(--color-neutral-0);
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    z-index: 2;
+    letter-spacing: 0.05em;
+}
+
+.product-card__info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Allows the info area to fill available height */
+}
+
+.product-card__brand {
+    font-size: var(--text-xs);
+    color: var(--color-neutral-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-1);
+}
+
+.product-card__title {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-neutral-900);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-card__description {
+    color: var(--color-neutral-600);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.product-card__price {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary-600);
+}
+
+/* ==========================================================================
+   VIEW MODE 1: GRID VIEW (Strict 6-Columns & Fixed Overlays)
+   ========================================================================== */
+   .product-layout--grid {
+    display: grid;
+    gap: var(--space-4);
+    /* Mobile fallback */
+    grid-template-columns: repeat(2, minmax(0, 1fr)); 
+    align-items: stretch;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .product-layout--grid { 
+        grid-template-columns: repeat(4, minmax(0, 1fr)); 
+    }
+}
+
+/* Force 6 columns on Desktop */
+@media (min-width: 1024px) {
+    .product-layout--grid { 
+        /* Using !important here to override any conflicting global styles */
+        grid-template-columns: repeat(6, minmax(0, 1fr)) !important; 
+    }
+}
+
+/* --- STRICT CARD & IMAGE SIZING --- */
+.product-layout--grid .product-card {
+    flex-direction: column;
+    /* min-width: 0 is the magic rule that stops grid blowout */
+    min-width: 0; 
+}
+
+.product-layout--grid .product-card__link {
+    flex-direction: column;
+    height: 100%;
+}
+
+.product-layout--grid .product-card__image-wrapper {
+    /* Changed from flex to block so the overlay stacks correctly */
+    display: block; 
+    position: relative;
+    width: 100%;
+    /* Fixed Height applied here */
+    height: 220px; 
+    background-color: var(--color-neutral-50);
+    border-bottom: 1px solid var(--color-neutral-200);
+    overflow: hidden;
+}
+
+.product-layout--grid .product-card__image {
+    width: 100%;
+    height: 100%;
+    /* contain ensures the blazer fits perfectly inside the 220px box */
+    object-fit: contain; 
+    padding: var(--space-3);
+    transition: transform 0.3s ease;
+}
+
+/* --- GRID INTERNALS --- */
+.product-layout--grid .product-card__info {
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.product-layout--grid .product-card__title {
+    -webkit-line-clamp: 2;
+    margin-bottom: var(--space-2);
+    font-size: var(--text-sm);
+    /* Prevents long text from stretching the card */
+    word-break: break-word; 
+}
+
+.product-layout--grid .product-card__description {
+    display: none; 
+}
+
+.product-layout--grid .product-card__price-wrapper {
+    margin-top: auto;
+    padding-top: var(--space-3);
+    border-top: 1px dashed var(--color-neutral-200);
+}
+
+.product-layout--grid .product-card__price {
+    font-size: var(--text-base);
+}
+
+.product-layout--grid .product-card__list-btn {
+    display: none; 
+}
+
+/* --- FIXED HOVER OVERLAY --- */
+.product-layout--grid .product-card__overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: var(--space-3);
+    /* Dark gradient so the button pops */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    display: flex;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all var(--transition-normal);
+    z-index: 10;
+}
+
+.product-layout--grid .product-card:hover .product-card__overlay {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ==========================================================================
+   VIEW MODE 2: LIST VIEW (Horizontal Rows)
+   ========================================================================== */
+.product-layout--list {
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+    gap: var(--space-4);
+}
+
+.product-layout--list .product-card {
+    max-width: 900px; 
+    width: 100%;
+}
+
+.product-layout--list .product-card__link {
+    flex-direction: row; 
+    align-items: stretch;
+}
+
+.product-layout--list .product-card__image-wrapper {
+    width: 240px; /* Slightly wider for better proportions */
+    min-width: 240px;
+    height: auto; 
+    flex-shrink: 0;
+    border-right: 1px solid var(--color-neutral-200);
+    padding: var(--space-3);
+}
+
+.product-layout--list .product-card__image {
+    object-fit: contain; 
+}
+
+.product-layout--list .product-card__info {
+    padding: var(--space-6);
+    justify-content: center;
+}
+
+.product-layout--list .product-card__title {
+    font-size: var(--text-xl);
+    -webkit-line-clamp: 1;
+    margin-bottom: var(--space-2);
+}
+
+.product-layout--list .product-card__description {
+    font-size: var(--text-sm);
+    -webkit-line-clamp: 3;
+    margin-bottom: var(--space-4);
+    line-height: 1.6;
+}
+
+.product-layout--list .product-card__price-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--color-neutral-200);
+    padding-top: var(--space-4);
+    margin-top: auto;
+}
+
+.product-layout--list .product-card__price {
+    font-size: var(--text-2xl);
+}
+
+.product-layout--list .product-card__overlay {
+    display: none;
+}
+
+/* ==========================================================================
+   Mobile Adaptations for List View
+   ========================================================================== */
+@media (max-width: 640px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-4);
+    }
+
+    .product-layout--list .product-card__link {
+        flex-direction: column;
+    }
+
+    .product-layout--list .product-card__image-wrapper {
+        width: 100%;
+        min-width: 100%;
+        height: 250px; 
+        border-right: none;
+        border-bottom: 1px solid var(--color-neutral-200);
+    }
+
+    .product-layout--list .product-card__info {
+        padding: var(--space-4);
+    }
+
+    .product-layout--list .product-card__title {
+        font-size: var(--text-lg);
+        -webkit-line-clamp: 2;
+        margin-bottom: var(--space-2);
+    }
+
+    .product-layout--list .product-card__description {
+        display: none; 
+    }
+
+    .product-layout--list .product-card__price-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+        margin-top: var(--space-4);
+    }
+
+    .product-layout--list .product-card__list-btn {
+        width: 100%;
+    }
+}
+
+/* --- Loading / Error States --- */
+.state-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-12) 0;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-neutral-200);
+    border-top-color: var(--color-primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.state-message {
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-md);
+    font-weight: var(--font-weight-medium);
+    text-align: center;
+}
+
+.state-container--error .state-message {
+    background-color: var(--color-error-100);
+    color: var(--color-error-600);
+}
+
+.state-container--empty .state-message {
+    background-color: var(--color-primary-50);
+    color: var(--color-primary-700);
+}

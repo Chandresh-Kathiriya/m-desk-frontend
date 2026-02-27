@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
-import { Row, Col, ListGroup, Image, Card, Container, Spinner, Badge, Alert } from 'react-bootstrap';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../../store/reducers';
 import { getUserOrderDetails } from '../../../store/actions/user/orderActions';
 
+import styles from '../../../schemas/css/OrderDetailsPage.module.css';
+
 const OrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<any>();
 
-  // Redux State
   const userAuth = useSelector((state: RootState) => state.userAuth || {});
   const { userInfo } = userAuth as any;
 
@@ -18,7 +18,6 @@ const OrderDetailsPage: React.FC = () => {
 
   useEffect(() => {
     if (userInfo && userInfo.token && id) {
-      // Only fetch if the order isn't loaded or doesn't match the current URL ID
       if (!order || order._id !== id) {
         dispatch(getUserOrderDetails(id));
       }
@@ -27,77 +26,189 @@ const OrderDetailsPage: React.FC = () => {
 
   const formatOrderId = (orderId: string) => `ORD-${orderId.slice(-6).toUpperCase()}`;
 
-  if (loading) return <Spinner animation="border" className="d-block mx-auto mt-5" />;
-  if (error) return <Container className="py-5"><Alert variant="danger">{error}</Alert></Container>;
-  if (!order) return <Container className="py-5"><h4>Order not found</h4></Container>;
+  if (loading) return (
+    <div className={styles['state-container']}>
+      <div className={styles.spinner}></div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className={`${styles['state-container']} ${styles['state-container--error']}`}>
+      <p className={styles['state-message']}>{error}</p>
+    </div>
+  );
+  
+  if (!order) return (
+    <div className={`${styles['state-container']} ${styles['state-container--empty']}`}>
+      <p className={styles['state-message']}>Order not found.</p>
+    </div>
+  );
 
   return (
-    <Container className="py-5 min-vh-100">
-      <h2 className="fw-bold mb-4">Order {formatOrderId(order._id)}</h2>
-      
-      <Row className="g-5">
-        <Col md={8}>
-          <ListGroup variant="flush" className="shadow-sm rounded border">
-            <ListGroup.Item className="p-4">
-              <h4 className="fw-bold mb-3">Shipping Details</h4>
-              <p><strong>Name: </strong> {order.user?.name}</p>
-              <p><strong>Email: </strong> <a href={`mailto:${order.user?.email}`}>{order.user?.email}</a></p>
-              <p className="mb-3">
-                <strong>Address: </strong>
-                {order.shippingAddress?.address}, {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}
-              </p>
-              {order.isDelivered ? (
-                <Badge bg="success" className="p-2 fs-6">Delivered on {new Date(order.deliveredAt).toLocaleDateString()}</Badge>
-              ) : (
-                <Badge bg="warning" text="dark" className="p-2 fs-6">Processing / Not Delivered</Badge>
-              )}
-            </ListGroup.Item>
+    <main className={styles['order-page']}>
+      <div className={styles['order-page__container']}>
+        
+        <header className={styles['order-header']}>
+          <div className={styles['order-header__info']}>
+            <Link to="/orders" className={styles['order-header__back']}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              Back to Orders
+            </Link>
+            <h1 className={styles['order-title']}>Order {formatOrderId(order._id)}</h1>
+            <span className={styles['order-date']}>
+              Placed on {new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          </div>
+        </header>
 
-            <ListGroup.Item className="p-4">
-              <h4 className="fw-bold mb-3">Payment Details</h4>
-              <p><strong>Method: </strong> {order.paymentMethod}</p>
-              {order.isPaid ? (
-                <Badge bg="success" className="p-2 fs-6">Paid on {new Date(order.createdAt).toLocaleDateString()}</Badge>
-              ) : (
-                <Badge bg="danger" className="p-2 fs-6">Not Paid</Badge>
-              )}
-            </ListGroup.Item>
+        <div className={styles['order-layout']}>
+          
+          {/* LEFT COLUMN: Order Details */}
+          <section className={styles['order-main']}>
+            
+            {/* Shipping & Delivery Card */}
+            <div className={styles['info-card']}>
+              <div className={styles['info-card__header']}>
+                <h2 className={styles['info-card__title']}>Shipping Details</h2>
+                {order.isDelivered ? (
+                  <span className={`${styles.badge} ${styles['badge--success']}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Delivered on {new Date(order.deliveredAt).toLocaleDateString()}
+                  </span>
+                ) : (
+                  <span className={`${styles.badge} ${styles['badge--warning']}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Processing / Not Delivered
+                  </span>
+                )}
+              </div>
+              <div className={styles['info-card__body']}>
+                <div className={styles['info-grid']}>
+                  <div className={styles['info-group']}>
+                    <span className={styles['info-label']}>Contact Name</span>
+                    <span className={styles['info-value']}>{order.user?.name}</span>
+                  </div>
+                  <div className={styles['info-group']}>
+                    <span className={styles['info-label']}>Email Address</span>
+                    <a href={`mailto:${order.user?.email}`} className={styles['info-link']}>{order.user?.email}</a>
+                  </div>
+                  <div className={`${styles['info-group']} ${styles['info-group--full']}`}>
+                    <span className={styles['info-label']}>Shipping Address</span>
+                    <span className={styles['info-value']}>
+                      {order.shippingAddress?.address}, {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <ListGroup.Item className="p-4">
-              <h4 className="fw-bold mb-3">Order Items</h4>
-              <ListGroup variant="flush">
+            {/* Payment Card */}
+            <div className={styles['info-card']}>
+              <div className={styles['info-card__header']}>
+                <h2 className={styles['info-card__title']}>Payment Details</h2>
+                {order.isPaid ? (
+                  <span className={`${styles.badge} ${styles['badge--success']}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Paid
+                  </span>
+                ) : (
+                  <span className={`${styles.badge} ${styles['badge--error']}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Not Paid
+                  </span>
+                )}
+              </div>
+              <div className={styles['info-card__body']}>
+                <div className={styles['info-grid']}>
+                  <div className={styles['info-group']}>
+                    <span className={styles['info-label']}>Payment Method</span>
+                    <span className={styles['info-value']}>
+                      <span className={styles['payment-method-badge']}>{order.paymentMethod}</span>
+                    </span>
+                  </div>
+                  {order.isPaid && (
+                    <div className={styles['info-group']}>
+                      <span className={styles['info-label']}>Payment Date</span>
+                      <span className={styles['info-value']}>{new Date(order.paidAt || order.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Order Items */}
+            <div className={styles['info-card']}>
+              <div className={styles['info-card__header']}>
+                <h2 className={styles['info-card__title']}>Order Items</h2>
+              </div>
+              <ul className={styles['item-list']}>
                 {order.orderItems?.map((item: any, index: number) => (
-                  <ListGroup.Item key={index} className="px-0 py-3 border-bottom-0">
-                    <Row className="align-items-center">
-                      <Col xs={3} md={2}><Image src={item.image} fluid rounded className="border shadow-sm" /></Col>
-                      <Col xs={5} md={6}>
-                        <Link to={`/product/${item.product}`} className="text-decoration-none fw-bold text-dark fs-5">{item.name}</Link>
-                        <div className="text-muted small mt-1">Color: {item.color} | Size: {item.size}</div>
-                      </Col>
-                      <Col xs={4} md={4} className="fw-bold fs-5 text-end text-primary">
-                        {item.qty} x ₹{item.price.toFixed(2)} = ₹{(item.qty * item.price).toFixed(2)}
-                      </Col>
-                    </Row>
-                  </ListGroup.Item>
+                  <li key={index} className={styles['item-card']}>
+                    <div className={styles['item-card__image-wrapper']}>
+                      <img src={item.image || 'https://via.placeholder.com/80'} alt={item.name} className={styles['item-card__image']} />
+                    </div>
+                    <div className={styles['item-card__details']}>
+                      <Link to={`/product/${item.product}`} className={styles['item-card__title']}>
+                        {item.name}
+                      </Link>
+                      <div className={styles['item-card__meta']}>
+                        <span>Color: {item.color}</span>
+                        <span className={styles['item-card__meta-divider']}>|</span>
+                        <span>Size: {item.size}</span>
+                      </div>
+                    </div>
+                    <div className={styles['item-card__pricing']}>
+                      <span className={styles['item-card__calculation']}>
+                        {item.qty} × ₹{item.price.toFixed(2)}
+                      </span>
+                      <span className={styles['item-card__total']}>
+                        ₹{(item.qty * item.price).toFixed(2)}
+                      </span>
+                    </div>
+                  </li>
                 ))}
-              </ListGroup>
-            </ListGroup.Item>
-          </ListGroup>
-        </Col>
+              </ul>
+            </div>
 
-        <Col md={4}>
-          <Card className="shadow-sm border-0 bg-light">
-            <Card.Body className="p-4">
-              <h4 className="fw-bold border-bottom pb-3 mb-4">Order Summary</h4>
-              <Row className="mb-3 fs-5"><Col className="text-muted">Items:</Col><Col className="text-end fw-bold">₹{order.itemsPrice?.toFixed(2)}</Col></Row>
-              <Row className="mb-3 fs-5"><Col className="text-muted">Shipping:</Col><Col className="text-end fw-bold">₹{order.shippingPrice?.toFixed(2)}</Col></Row>
-              <hr />
-              <Row className="mb-2 fs-4"><Col className="fw-bold">Total:</Col><Col className="text-end fw-bold text-primary">₹{order.totalPrice?.toFixed(2)}</Col></Row>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+          </section>
+
+          {/* RIGHT COLUMN: Order Summary */}
+          <aside className={styles['order-sidebar']}>
+            <div className={styles['summary-card']}>
+              <h2 className={styles['summary-card__title']}>Order Summary</h2>
+              
+              <div className={styles['summary-card__body']}>
+                <div className={styles['summary-row']}>
+                  <span className={styles['summary-label']}>Items Subtotal</span>
+                  <span className={styles['summary-value']}>₹{order.itemsPrice?.toFixed(2)}</span>
+                </div>
+                <div className={styles['summary-row']}>
+                  <span className={styles['summary-label']}>Shipping</span>
+                  <span className={styles['summary-value']}>
+                    {order.shippingPrice === 0 ? <span className={styles['summary-value--free']}>Free</span> : `₹${order.shippingPrice?.toFixed(2)}`}
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles['summary-card__footer']}>
+                <div className={styles['summary-total-row']}>
+                  <span className={styles['summary-total-label']}>Total</span>
+                  {/* Fixed markup mapping for Flexbox alignment */}
+                  <span className={styles['summary-total-value']}>
+                    <span className={styles['summary-currency']}>INR</span>
+                    <span>₹{order.totalPrice?.toFixed(2)}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </main>
   );
 };
 

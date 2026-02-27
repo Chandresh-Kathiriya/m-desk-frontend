@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Container, Card, Form, Button, Row, Col, Spinner, Alert, Badge, Image, Table, Modal } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
+
 import { listProductDetails, createProduct, updateProduct } from '../../../store/actions/admin/productActions';
 import { listMasterData } from '../../../store/actions/admin/masterDataActions';
-import { RootState } from '../../../store/reducers';
-import { PRODUCT_CREATE_RESET, PRODUCT_UPDATE_RESET } from '../../../store/constants/admin/productConstants';
 import { adjustStock } from '../../../store/actions/admin/inventoryActions';
-import { uploadImage } from '../../../store/actions/admin/uploadActions';
+import { PRODUCT_CREATE_RESET, PRODUCT_UPDATE_RESET } from '../../../store/constants/admin/productConstants';
+import { RootState } from '../../../store/reducers';
+import { uploadBatchImages } from '../../../store/actions/admin/uploadActions';
 import { UPLOAD_IMAGE_RESET } from '../../../store/constants/admin/uploadConstants';
+
+import styles from '../../../schemas/css/ProductForm.module.css';
+
+interface PendingImage { id: string; file: File; preview: string; color: string; view: string; }
+interface ProductImage { url: string; color: string; view: string; }
 
 const ProductForm: React.FC = () => {
   const { id } = useParams();
@@ -19,57 +24,39 @@ const ProductForm: React.FC = () => {
   const adminAuth = useSelector((state: RootState) => state.adminAuth);
   const { adminInfo } = adminAuth as any;
 
-  // --- MASTER DATA FROM REDUX ---
   const masterDataList = useSelector((state: RootState) => state.masterDataList || {} as any);
-  const { 
-    brands = [] as any[], 
-    styles = [] as any[], 
-    colors = [] as any[], 
-    sizes = [] as any[], 
-    categories = [] as any[], 
-    types = [] as any[] 
-  } = masterDataList as any;
+  const { brands = [], styles: styleList = [], colors = [], sizes = [], categories = [], types = [] } = masterDataList as any;
 
   const [formData, setFormData] = useState({
-    productName: '',
-    productCategory: '',
-    brand: '',
-    style: '',
-    productType: '',
-    material: '',
-    colors: [] as string[],
-    sizes: [] as string[],
-    variants: [] as any[],
-    published: false,
-    images: [] as { url: string, color: string }[],
+    productName: '', productCategory: '', brand: '', style: '',
+    productType: '', material: '', colors: [] as string[], sizes: [] as string[],
+    variants: [] as any[], published: false, images: [] as ProductImage[],
   });
 
-  const [pendingImage, setPendingImage] = useState<File | null>(null);
-  const [imgColor, setImgColor] = useState('');
-  const [imgView, setImgView] = useState('front');
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+
   const [showStockModal, setShowStockModal] = useState(false);
   const [activeStockIndex, setActiveStockIndex] = useState<number | null>(null);
   const [adjQty, setAdjQty] = useState<number | string>('');
   const [stockReason, setStockReason] = useState('New Purchase Order');
   const [stockNotes, setStockNotes] = useState('');
 
-  // Redux States
   const inventoryUpdate = useSelector((state: RootState) => state.inventoryUpdate || {} as any);
-  const { loading: updateLoading } = inventoryUpdate;
+  const { loading: updateLoading, error: updateError } = inventoryUpdate;
 
   const productDetails = useSelector((state: RootState) => state.productDetails);
   const { loading: loadingDetails, error: errorDetails, product } = productDetails;
-  
+
   const productCreate = useSelector((state: RootState) => state.productCreate);
   const { loading: loadingCreate, error: errorCreate, success: successCreate } = productCreate;
-  
+
   const productUpdate = useSelector((state: RootState) => state.productUpdate);
   const { loading: loadingUpdate, error: errorUpdate, success: successUpdate } = productUpdate;
 
   const imageUpload = useSelector((state: RootState) => state.imageUpload || {} as any);
-  const { loading: uploading, success: uploadSuccess, imageUrl, error: uploadError } = imageUpload;
+  const { loading: uploading, success: uploadSuccess, uploadedImages, error: uploadError } = imageUpload;
 
-  // Initial Data Fetch
   useEffect(() => {
     if (!adminInfo || !adminInfo.token) navigate('/admin/login');
     dispatch(listMasterData('brands'));
@@ -79,6 +66,20 @@ const ProductForm: React.FC = () => {
     dispatch(listMasterData('categories'));
     dispatch(listMasterData('types'));
   }, [dispatch, adminInfo, navigate]);
+
+  useEffect(() => {
+    if (uploadSuccess && uploadedImages && uploadedImages.length > 0) {
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...uploadedImages] }));
+      setPendingImages([]); 
+      setIsUploadingBatch(false);
+      dispatch({ type: UPLOAD_IMAGE_RESET }); 
+    }
+    if (uploadError) {
+      alert(`Upload failed: ${uploadError}`);
+      setIsUploadingBatch(false);
+      dispatch({ type: UPLOAD_IMAGE_RESET });
+    }
+  }, [uploadSuccess, uploadError, uploadedImages, dispatch]);
 
   useEffect(() => {
     if (successCreate || successUpdate) {
@@ -105,22 +106,6 @@ const ProductForm: React.FC = () => {
       }
     }
   }, [dispatch, navigate, id, isEditing, product, successCreate, successUpdate]);
-
-  // Handle Image Upload Success & Errors
-  useEffect(() => {
-    if (uploadSuccess && imageUrl) {
-      setFormData(prev => ({ 
-        ...prev, 
-        images: [...prev.images, { url: imageUrl, color: imgColor.toLowerCase() }] 
-      }));
-      setPendingImage(null);
-      dispatch({ type: UPLOAD_IMAGE_RESET });
-    }
-    if (uploadError) {
-      alert(`Upload failed: ${uploadError}`);
-      dispatch({ type: UPLOAD_IMAGE_RESET });
-    }
-  }, [uploadSuccess, uploadError, imageUrl, imgColor, dispatch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -149,8 +134,8 @@ const ProductForm: React.FC = () => {
 
     const selectedBrand = brands.find((b: any) => b._id === formData.brand)?.name || 'BRN';
     const selectedCategory = categories.find((c: any) => c._id === formData.productCategory)?.name || 'CAT';
-    const selectedStyle = styles.find((s: any) => s._id === formData.style)?.name || 'STL';
-    const selectedType = formData.productType; 
+    const selectedStyle = styleList.find((s: any) => s._id === formData.style)?.name || 'STL';
+    const selectedType = formData.productType;
 
     const brandPfx = selectedBrand.substring(0, 3).toUpperCase();
     const catPfx = selectedCategory.substring(0, 3).toUpperCase();
@@ -168,14 +153,8 @@ const ProductForm: React.FC = () => {
         const sku = `${brandPfx}-${catPfx}-${typePfx}-${stylePfx}-${colorPfx}-${sizePfx}-${Math.floor(100 + Math.random() * 900)}`;
 
         generatedVariants.push({
-          sku,
-          color: colorObj.name,
-          size: sizeObj.code,
-          stock: 0,
-          salesPrice: 0,
-          salesTax: 0,
-          purchasePrice: 0,
-          purchaseTax: 0
+          sku, color: colorObj.name, size: sizeObj.code, stock: 0,
+          salesPrice: 0, salesTax: 0, purchasePrice: 0, purchaseTax: 0
         });
       });
     });
@@ -189,23 +168,27 @@ const ProductForm: React.FC = () => {
     setFormData({ ...formData, variants: updatedVariants });
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPendingImage(file);
-    setImgColor('');
-    setImgView('front');
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, colorTarget: string) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    
+    const newPending: PendingImage[] = files.map(file => ({
+      id: Math.random().toString(36).substring(7),
+      file, preview: URL.createObjectURL(file), 
+      color: colorTarget.toLowerCase(), view: '' 
+    }));
+    
+    setPendingImages(prev => [...prev, ...newPending]);
+    e.target.value = ''; 
   };
 
-  const confirmUpload = () => {
-    if (!pendingImage || !imgColor) return alert('Select image and color.');
-    const finalSpecName = `${imgColor}_${imgView}_${Date.now()}`.toLowerCase();
-    
-    const uploadData = new FormData();
-    uploadData.append('fileName', finalSpecName);
-    uploadData.append('image', pendingImage);
+  const updatePendingImage = (id: string, field: 'view', value: string) => {
+    setPendingImages(prev => prev.map(img => img.id === id ? { ...img, [field]: value } : img));
+  };
 
-    dispatch(uploadImage(uploadData));
+  const confirmBatchUpload = () => {
+    setIsUploadingBatch(true);
+    dispatch(uploadBatchImages(pendingImages)); 
   };
 
   const submitHandler = (e: React.FormEvent) => {
@@ -227,7 +210,6 @@ const ProductForm: React.FC = () => {
   const handleStockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (activeStockIndex === null) return;
-
     const variant = formData.variants[activeStockIndex];
     const qty = Number(adjQty);
 
@@ -239,7 +221,7 @@ const ProductForm: React.FC = () => {
       setShowStockModal(false);
     } else {
       const updatedVariants = [...formData.variants];
-      updatedVariants[activeStockIndex].stock = qty; 
+      updatedVariants[activeStockIndex].stock = qty;
       updatedVariants[activeStockIndex].stockReason = stockReason;
       updatedVariants[activeStockIndex].stockNotes = stockNotes;
       setFormData({ ...formData, variants: updatedVariants });
@@ -250,112 +232,102 @@ const ProductForm: React.FC = () => {
   const activeColorNames = colors.filter((c: any) => formData.colors.includes(c._id)).map((c: any) => c.name);
 
   return (
-    <Container className="py-4">
-      <Card className="shadow-sm mx-auto" style={{ maxWidth: '900px', borderTop: '4px solid var(--primary-color)' }}>
-        <Card.Body>
-          <h3 className="mb-4">{isEditing ? 'Edit Product' : 'Add New Product'}</h3>
+    <main className={styles['page-wrapper']}>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          
+          <h1 className={styles['page-title']}>{isEditing ? 'Edit Product' : 'Add New Product'}</h1>
 
-          {loadingDetails && <Spinner animation="border" className="d-block mx-auto mb-3" />}
-          {errorDetails && <Alert variant="danger">{errorDetails}</Alert>}
-          {errorCreate && <Alert variant="danger">{errorCreate}</Alert>}
-          {errorUpdate && <Alert variant="danger">{errorUpdate}</Alert>}
+          {loadingDetails && <div className={styles['spinner-container']}><div className={styles.spinner}></div></div>}
+          {errorDetails && <div className={`${styles.alert} ${styles['alert--error']}`}>{errorDetails}</div>}
+          {errorCreate && <div className={`${styles.alert} ${styles['alert--error']}`}>{errorCreate}</div>}
+          {errorUpdate && <div className={`${styles.alert} ${styles['alert--error']}`}>{errorUpdate}</div>}
 
-          <Form onSubmit={submitHandler}>
-            <Form.Group className="mb-3">
-              <Form.Label>Product Name</Form.Label>
-              <Form.Control type="text" name="productName" value={formData.productName} onChange={handleChange} required />
-            </Form.Group>
+          <form onSubmit={submitHandler}>
+            <div className={styles['form-group']}>
+              <label className={styles.label}>Product Name</label>
+              <input type="text" className={styles.input} name="productName" value={formData.productName} onChange={handleChange} required />
+            </div>
 
-            <Row className="mb-3 bg-light p-3 rounded mx-0">
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>Brand</Form.Label>
-                  <Form.Select name="brand" value={formData.brand} onChange={handleChange} required>
-                    <option value="">Select Brand...</option>
-                    {brands.map((b: any) => <option key={b._id} value={b._id}>{b.name}</option>)}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>Product Type</Form.Label>
-                  <Form.Select name="productType" value={formData.productType} onChange={handleChange} required>
-                    <option value="">Select Type...</option>
-                    {types.map((t: any) => <option key={t._id} value={t.name}>{t.name}</option>)}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>Style</Form.Label>
-                  <Form.Select name="style" value={formData.style} onChange={handleChange} required>
-                    <option value="">Select Style...</option>
-                    {styles.map((s: any) => <option key={s._id} value={s._id}>{s.name}</option>)}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>Category</Form.Label>
-                  <Form.Select name="productCategory" value={formData.productCategory} onChange={handleChange} required>
-                    <option value="">Select Category...</option>
-                    {categories.map((c: any) => <option key={c._id} value={c._id}>{c.name}</option>)}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
+            <div className={styles['form-grid-4']}>
+              <div>
+                <label className={styles.label}>Brand</label>
+                <select className={styles.select} name="brand" value={formData.brand} onChange={handleChange} required>
+                  <option value="">Select Brand...</option>
+                  {brands.map((b: any) => <option key={b._id} value={b._id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={styles.label}>Product Type</label>
+                <select className={styles.select} name="productType" value={formData.productType} onChange={handleChange} required>
+                  <option value="">Select Type...</option>
+                  {types.map((t: any) => <option key={t._id} value={t.name}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={styles.label}>Style</label>
+                <select className={styles.select} name="style" value={formData.style} onChange={handleChange} required>
+                  <option value="">Select Style...</option>
+                  {styleList.map((s: any) => <option key={s._id} value={s._id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={styles.label}>Category</label>
+                <select className={styles.select} name="productCategory" value={formData.productCategory} onChange={handleChange} required>
+                  <option value="">Select Category...</option>
+                  {categories.map((c: any) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Material</Form.Label>
-              <Form.Control type="text" name="material" value={formData.material} onChange={handleChange} placeholder="e.g. 100% Cotton" required />
-            </Form.Group>
+            <div className={styles['form-group']}>
+              <label className={styles.label}>Material</label>
+              <input type="text" className={styles.input} name="material" value={formData.material} onChange={handleChange} placeholder="e.g. 100% Cotton" required />
+            </div>
 
-            {/* --- STEP 1: DEFINE VARIANTS --- */}
-            <div className="mb-4 p-3 border border-primary rounded" style={{ backgroundColor: '#f0f8ff' }}>
-              <h6 className="fw-bold mb-3 text-primary">1. Select Variants & Generate SKUs</h6>
-              <Row className="mb-3">
-                <Col md={5}>
-                  <Form.Label className="small fw-bold">Available Colors</Form.Label>
-                  <div className="d-flex flex-wrap gap-2 p-2 border bg-white rounded" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+            {/* --- STEP 1: VARIANTS --- */}
+            <div className={styles['section-box']}>
+              <h2 className={styles['section-title']}>1. Select Variants & Generate SKUs</h2>
+              
+              <div className={styles['form-grid-2']}>
+                <div>
+                  <label className={styles.label}>Available Colors</label>
+                  <div className={styles['checkbox-box']}>
                     {colors.map((c: any) => (
-                      <Form.Check
-                        key={c._id} type="checkbox" id={`color-${c._id}`} label={c.name}
-                        checked={formData.colors.includes(c._id)}
-                        onChange={() => handleArrayChange('colors', c._id)}
-                      />
+                      <label key={c._id} className={styles['checkbox-label']}>
+                        <input type="checkbox" checked={formData.colors.includes(c._id)} onChange={() => handleArrayChange('colors', c._id)} />
+                        <span>{c.name}</span>
+                      </label>
                     ))}
                   </div>
-                </Col>
-                <Col md={5}>
-                  <Form.Label className="small fw-bold">Available Sizes</Form.Label>
-                  <div className="d-flex flex-wrap gap-3 p-2 border bg-white rounded" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                </div>
+                <div>
+                  <label className={styles.label}>Available Sizes</label>
+                  <div className={styles['checkbox-box']}>
                     {sizes.map((s: any) => (
-                      <Form.Check
-                        key={s._id} type="checkbox" id={`size-${s._id}`} label={s.code}
-                        checked={formData.sizes.includes(s._id)}
-                        onChange={() => handleArrayChange('sizes', s._id)}
-                      />
+                      <label key={s._id} className={styles['checkbox-label']}>
+                        <input type="checkbox" checked={formData.sizes.includes(s._id)} onChange={() => handleArrayChange('sizes', s._id)} />
+                        <span>{s.code}</span>
+                      </label>
                     ))}
                   </div>
-                </Col>
-                <Col md={2} className="d-flex align-items-end">
-                  <Button variant="primary" className="w-100" onClick={generateVariants}>Generate</Button>
-                </Col>
-              </Row>
+                </div>
+                <div>
+                  <button type="button" className={`${styles.btn} ${styles['btn-primary']}`} onClick={generateVariants} style={{ width: '100%' }}>
+                    Generate SKUs
+                  </button>
+                </div>
+              </div>
 
               {formData.variants.length > 0 && (
-                <div className="mt-3 bg-white border rounded">
-                  <Table size="sm" bordered hover responsive className="mb-0 text-center align-middle" style={{ fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                    <thead className="table-dark">
+                <div className={styles['table-responsive']}>
+                  <table className={styles['variant-table']}>
+                    <thead>
                       <tr>
-                        <th>SKU</th>
-                        <th>Color</th>
-                        <th>Size</th>
-                        <th style={{ minWidth: '100px' }}>Sales Price</th>
-                        <th style={{ minWidth: '80px' }}>Sales Tax(%)</th>
-                        <th className="bg-primary text-white">Final MRP</th>
-                        <th style={{ minWidth: '100px' }}>Purch. Price</th>
-                        <th style={{ minWidth: '80px' }}>Purch. Tax(%)</th>
+                        <th>SKU</th><th>Color</th><th>Size</th>
+                        <th>Sales Price</th><th>Sales Tax(%)</th>
+                        <th className={styles.highlight}>Final MRP</th>
+                        <th>Purch. Price</th><th>Purch. Tax(%)</th>
                         <th>Stock</th>
                       </tr>
                     </thead>
@@ -367,182 +339,187 @@ const ProductForm: React.FC = () => {
 
                         return (
                           <tr key={i}>
-                            <td className="font-monospace fw-bold">{v.sku}</td>
-                            <td className="text-capitalize">{v.color}</td>
-                            <td className="text-uppercase">{v.size}</td>
-
+                            <td className={styles['text-sku']}>{v.sku}</td>
+                            <td style={{ textTransform: 'capitalize' }}>{v.color}</td>
+                            <td style={{ textTransform: 'uppercase' }}>{v.size}</td>
+                            <td><input type="number" className={`${styles.input} ${styles['input-sm']}`} value={v.salesPrice} onChange={(e) => handleVariantFieldChange(i, 'salesPrice', e.target.value)} min="0" /></td>
+                            <td><input type="number" className={`${styles.input} ${styles['input-sm']}`} value={v.salesTax} onChange={(e) => handleVariantFieldChange(i, 'salesTax', e.target.value)} min="0" /></td>
+                            <td className={styles['text-mrp']}>₹{finalMrp.toFixed(2)}</td>
+                            <td><input type="number" className={`${styles.input} ${styles['input-sm']}`} value={v.purchasePrice} onChange={(e) => handleVariantFieldChange(i, 'purchasePrice', e.target.value)} min="0" /></td>
+                            <td><input type="number" className={`${styles.input} ${styles['input-sm']}`} value={v.purchaseTax} onChange={(e) => handleVariantFieldChange(i, 'purchaseTax', e.target.value)} min="0" /></td>
                             <td>
-                              <Form.Control type="number" size="sm" value={v.salesPrice} onChange={(e) => handleVariantFieldChange(i, 'salesPrice', e.target.value)} min="0" />
-                            </td>
-                            <td>
-                              <Form.Control type="number" size="sm" value={v.salesTax} onChange={(e) => handleVariantFieldChange(i, 'salesTax', e.target.value)} min="0" />
-                            </td>
-
-                            <td className="fw-bold text-success fs-6">
-                              ₹{finalMrp.toFixed(2)}
-                            </td>
-
-                            <td>
-                              <Form.Control type="number" size="sm" value={v.purchasePrice} onChange={(e) => handleVariantFieldChange(i, 'purchasePrice', e.target.value)} min="0" />
-                            </td>
-                            <td>
-                              <Form.Control type="number" size="sm" value={v.purchaseTax} onChange={(e) => handleVariantFieldChange(i, 'purchaseTax', e.target.value)} min="0" />
-                            </td>
-
-                            <td className="align-middle">
-                              <div className="d-flex flex-column align-items-center">
-                                <Badge bg={v.stock > 0 ? 'success' : 'secondary'} className="mb-1 fs-6">
-                                  {v.stock}
-                                </Badge>
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="p-0 text-decoration-none"
-                                  onClick={() => handleOpenStockModal(i)}
-                                >
-                                  {id ? 'Adjust Stock' : 'Set Initial Stock'}
-                                </Button>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                <span className={`${styles.badge} ${v.stock > 0 ? styles['badge--success'] : styles['badge--secondary']}`}>{v.stock}</span>
+                                <button type="button" className={styles['btn-link']} onClick={() => handleOpenStockModal(i)}>
+                                  {id ? 'Adjust' : 'Set Initial'}
+                                </button>
                               </div>
                             </td>
                           </tr>
                         );
                       })}
                     </tbody>
-                  </Table>
+                  </table>
                 </div>
               )}
             </div>
 
-            {/* --- STEP 2: IMAGE UPLOAD --- */}
-            <Form.Group className="mb-4 p-3 border rounded bg-light">
-              <Form.Label className="fw-bold">2. Upload Color-Mapped Images</Form.Label>
+            {/* --- STEP 2: IMAGES --- */}
+            <div className={`${styles['section-box']} ${styles['section-box--white']}`}>
+              <h2 className={styles['section-title']}>2. Upload Images by Color</h2>
+              
               {activeColorNames.length === 0 ? (
-                <Alert variant="warning" className="py-2 mb-0">Select Colors in Step 1 to upload images.</Alert>
+                <div className={`${styles.alert} ${styles['alert--warning']}`}>
+                  Select Colors in Step 1 to unlock image uploads.
+                </div>
               ) : (
                 <>
-                  <Row className="align-items-end mb-3">
-                    <Col md={4}><Form.Control type="file" onChange={handleFileSelect} disabled={uploading} accept="image/*" /></Col>
-                    {pendingImage && (
-                      <>
-                        <Col md={3}>
-                          <Form.Select value={imgColor} onChange={(e) => setImgColor(e.target.value)}>
-                            <option value="">Select Color...</option>
-                            {activeColorNames.map((c: string) => <option key={c} value={c}>{c}</option>)}
-                          </Form.Select>
-                        </Col>
-                        <Col md={3}>
-                          <Form.Select value={imgView} onChange={(e) => setImgView(e.target.value)}>
-                            <option value="front">Front View</option>
-                            <option value="back">Back View</option>
-                            <option value="side">Side</option>
-                          </Form.Select>
-                        </Col>
-                        <Col md={2}>
-                          <Button variant="success" className="w-100" onClick={confirmUpload} disabled={uploading || !imgColor}>
-                            {uploading ? <Spinner size="sm" animation="border" /> : 'Upload'}
-                          </Button>
-                        </Col>
-                      </>
-                    )}
-                  </Row>
-
                   {activeColorNames.map((color: string) => {
-                    const colorImages = formData.images.filter(img => img.color.toLowerCase() === color.toLowerCase());
-                    if (colorImages.length === 0) return null;
+                    const colorPending = pendingImages.filter(img => img.color === color.toLowerCase());
+                    const colorUploaded = formData.images.filter(img => img.color.toLowerCase() === color.toLowerCase());
+
                     return (
-                      <div key={color} className="mt-3">
-                        <h6 className="text-uppercase text-muted border-bottom pb-1 mb-2">{color} Images</h6>
-                        <div className="d-flex flex-wrap gap-3">
-                          {colorImages.map((imgObj, index) => (
-                            <div key={index} className="position-relative" style={{ width: '100px', height: '100px' }}>
-                              <Image src={imgObj.url} thumbnail style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              <Button variant="danger" size="sm" className="position-absolute top-0 end-0 p-0 shadow" style={{ width: '22px', height: '22px', lineHeight: '10px', marginTop: '-5px', marginRight: '-5px' }} onClick={() => setFormData({ ...formData, images: formData.images.filter(i => i.url !== imgObj.url) })}>&times;</Button>
-                            </div>
-                          ))}
+                      <div key={color} style={{ marginBottom: 'var(--space-6)' }}>
+                        <div className={styles['color-header']}>
+                          <h6 className={styles['color-title']}>
+                            <div className={styles['color-dot']} style={{ backgroundColor: color.toLowerCase() }}></div>
+                            {color} Images
+                          </h6>
+                          <span className={`${styles.badge} ${styles['badge--success']}`}>{colorUploaded.length} Uploaded</span>
                         </div>
+
+                        <input type="file" className={styles['file-input']} onChange={(e) => handleFileSelect(e, color)} disabled={isUploadingBatch || uploading} accept="image/*" multiple />
+
+                        {colorPending.length > 0 && (
+                          <div className={styles['staging-area']}>
+                            <span className={styles.label}>Pending Uploads ({colorPending.length})</span>
+                            <div className={styles['staging-grid']}>
+                              {colorPending.map(img => (
+                                <div key={img.id} className={styles['image-card']}>
+                                  <img src={img.preview} alt="preview" className={styles['image-preview']} />
+                                  <div className={styles['image-actions']}>
+                                    <select className={`${styles.select} ${styles['input-sm']}`} value={img.view} onChange={(e) => updatePendingImage(img.id, 'view', e.target.value)}>
+                                      <option value="">View (Opt)</option>
+                                      <option value="front">Front</option>
+                                      <option value="back">Back</option>
+                                      <option value="leftside">Left Side</option>
+                                      <option value="rightside">Right Side</option>
+                                      <option value="fullimage">Full Image</option>
+                                      <option value="closure">Closure</option>
+                                    </select>
+                                    <button type="button" className={`${styles.btn} ${styles['btn-sm']} ${styles['btn-outline-danger']}`} onClick={() => setPendingImages(prev => prev.filter(p => p.id !== img.id))}>
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {colorUploaded.length > 0 && (
+                          <div className={styles['uploaded-grid']}>
+                            {colorUploaded.map((imgObj, index) => (
+                              <div key={index} className={styles['uploaded-item']}>
+                                <img src={imgObj.url} alt="uploaded" className={styles['uploaded-img']} />
+                                {imgObj.view && <span className={styles['uploaded-badge']}>{imgObj.view}</span>}
+                                <button type="button" className={styles['btn-remove-abs']} onClick={() => setFormData({ ...formData, images: formData.images.filter(i => i.url !== imgObj.url) })}>
+                                  &times;
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
+
+                  {pendingImages.length > 0 && (
+                    <div style={{ textAlign: 'right', marginTop: 'var(--space-4)' }}>
+                      <button type="button" className={`${styles.btn} ${styles['btn-success']} ${styles['btn-lg']}`} onClick={confirmBatchUpload} disabled={isUploadingBatch || uploading}>
+                        {(isUploadingBatch || uploading) ? 'Uploading...' : `Upload All ${pendingImages.length} Pending Images`}
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
-            </Form.Group>
-
-            <Form.Group className="mb-4">
-              <Form.Check type="switch" id="published-switch" name="published" label="Publish Product" checked={formData.published} onChange={handleChange} />
-            </Form.Group>
-
-            <div className="d-flex justify-content-end gap-2">
-              <Button variant="secondary" onClick={() => navigate('/admin/products')}>Cancel</Button>
-              <Button variant="primary" type="submit" disabled={loadingCreate || loadingUpdate || uploading}>{loadingCreate || loadingUpdate ? 'Saving...' : 'Save Product'}</Button>
             </div>
-          </Form>
-        </Card.Body>
-      </Card>
 
-      {/* --- UNIFIED STOCK ADJUSTMENT MODAL --- */ }
-      <Modal show={showStockModal} onHide={() => setShowStockModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>{id ? 'Adjust Inventory' : 'Set Initial Opening Balance'}</Modal.Title>
-        </Modal.Header>
-        <Form onSubmit={handleStockSubmit}>
-          <Modal.Body>
-            {activeStockIndex !== null && (
-              <div className="mb-4 p-3 bg-light rounded border">
-                <h6 className="fw-bold">{formData.productName || 'New Product'}</h6>
-                <div className="text-muted font-monospace mb-2">{formData.variants[activeStockIndex].sku}</div>
-                <Badge bg="dark" className="me-2 text-uppercase">{formData.variants[activeStockIndex].size}</Badge>
-                <Badge bg="secondary" className="text-capitalize">{formData.variants[activeStockIndex].color}</Badge>
-                {id && (
-                  <div className="mt-2">Current Stock: <strong>{formData.variants[activeStockIndex].stock}</strong></div>
+            <div className={styles['form-group']}>
+              <label className={styles['switch-wrapper']}>
+                <input type="checkbox" name="published" className={styles['switch-input']} checked={formData.published} onChange={handleChange} />
+                <div className={styles.switch}></div>
+                <span className={styles['switch-text']}>Publish Product (Visible to Customers)</span>
+              </label>
+            </div>
+
+            <div className={styles['action-row']}>
+              <button type="button" className={`${styles.btn} ${styles['btn-secondary']}`} onClick={() => navigate('/admin/products')}>Cancel</button>
+              <button type="submit" className={`${styles.btn} ${styles['btn-primary']}`} disabled={loadingCreate || loadingUpdate || isUploadingBatch || uploading}>
+                {loadingCreate || loadingUpdate ? 'Saving...' : 'Save Product Data'}
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      {/* --- STOCK MODAL --- */}
+      {showStockModal && (
+        <div className={styles['modal-backdrop']} onClick={() => !updateLoading && setShowStockModal(false)}>
+          <div className={styles['modal-content']} onClick={(e) => e.stopPropagation()}>
+            <div className={styles['modal-header']}>
+              <h2 className={styles['modal-title']}>{id ? 'Adjust Inventory' : 'Set Initial Opening Balance'}</h2>
+              <button className={styles['btn-close']} onClick={() => setShowStockModal(false)} disabled={updateLoading}>&times;</button>
+            </div>
+            <div className={styles['modal-body']}>
+              <form onSubmit={handleStockSubmit}>
+                {updateError && <div className={`${styles.alert} ${styles['alert--error']}`}>{updateError}</div>}
+                
+                {activeStockIndex !== null && (
+                  <div className={styles['selected-item-box']}>
+                    <div className={styles['selected-item-title']}>{formData.productName || 'New Product'}</div>
+                    <div className={styles['selected-item-sku']}>{formData.variants[activeStockIndex].sku}</div>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <span className={`${styles.badge} ${styles['badge--dark']}`}>{formData.variants[activeStockIndex].size}</span>
+                      <span className={`${styles.badge} ${styles['badge--secondary']}`}>{formData.variants[activeStockIndex].color}</span>
+                    </div>
+                    {id && <div>Current Stock: <strong>{formData.variants[activeStockIndex].stock}</strong></div>}
+                  </div>
                 )}
-              </div>
-            )}
 
-            <Form.Group className="mb-3">
-              <Form.Label>
-                {id ? 'Units to Add/Remove (Use negative for removal)' : 'Total Initial Units (Opening Balance)'}
-              </Form.Label>
-              <Form.Control
-                type="number"
-                required
-                placeholder={id ? "e.g., 50 or -5" : "e.g., 100"}
-                value={adjQty}
-                onChange={(e) => setAdjQty(e.target.value)}
-                min={id ? undefined : "0"} 
-              />
-            </Form.Group>
+                <div className={styles['form-group']}>
+                  <label className={styles.label}>{id ? 'Units to Add/Remove (Use negative for removal)' : 'Total Initial Units (Opening Balance)'}</label>
+                  <input type="number" className={styles.input} required placeholder={id ? "e.g., 50 or -5" : "e.g., 100"} value={adjQty} onChange={(e) => setAdjQty(e.target.value)} min={id ? undefined : "0"} />
+                </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Reason</Form.Label>
-              <Form.Select required value={stockReason} onChange={(e) => setStockReason(e.target.value)}>
-                {!id && <option value="Initial Stock Setup">Initial Stock Setup</option>}
-                <option value="New Purchase Order">New Purchase Order (Stock In)</option>
-                <option value="Customer Return">Customer Return (Stock In)</option>
-                <option value="Damaged/Defective">Damaged / Defective (Stock Out)</option>
-                <option value="Lost in Transit">Lost in Transit (Stock Out)</option>
-                <option value="Inventory Correction">Inventory Correction</option>
-                <option value="Other">Other</option>
-              </Form.Select>
-            </Form.Group>
+                <div className={styles['form-group']}>
+                  <label className={styles.label}>Reason</label>
+                  <select className={styles.select} required value={stockReason} onChange={(e) => setStockReason(e.target.value)}>
+                    {!id && <option value="Initial Stock Setup">Initial Stock Setup</option>}
+                    <option value="New Purchase Order">New Purchase Order (Stock In)</option>
+                    <option value="Customer Return">Customer Return (Stock In)</option>
+                    <option value="Damaged/Defective">Damaged / Defective (Stock Out)</option>
+                    <option value="Lost in Transit">Lost in Transit (Stock Out)</option>
+                    <option value="Inventory Correction">Inventory Correction</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
 
-            <Form.Group className="mb-4">
-              <Form.Label>Additional Notes (Optional)</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                placeholder="e.g., PO# 12345"
-                value={stockNotes}
-                onChange={(e) => setStockNotes(e.target.value)}
-              />
-            </Form.Group>
+                <div className={styles['form-group']}>
+                  <label className={styles.label}>Additional Notes (Optional)</label>
+                  <textarea className={styles.textarea} placeholder="e.g., PO# 12345" value={stockNotes} onChange={(e) => setStockNotes(e.target.value)} />
+                </div>
 
-            <Button variant="primary" className="w-100" type="submit" disabled={updateLoading}>
-              {updateLoading ? <Spinner size="sm" animation="border" /> : 'Confirm Stock'}
-            </Button>
-          </Modal.Body>
-        </Form>
-      </Modal>
-    </Container>
+                <button type="submit" className={`${styles.btn} ${styles['btn-primary']}`} style={{ width: '100%' }} disabled={updateLoading}>
+                  {updateLoading ? 'Confirming...' : 'Confirm Stock'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 };
 
