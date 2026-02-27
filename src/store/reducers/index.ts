@@ -23,12 +23,13 @@ import {
 import { inventoryListReducer, inventoryUpdateReducer } from './admin/inventoryReducers';
 import { storefrontProductListReducer, storefrontProductDetailsReducer } from './storefront/productReducers';
 import { cartReducer } from './user/cartReducers';
-import { couponListReducer, couponCreateReducer } from './admin/couponReducers';
 import { orderListReducer, orderDetailsReducer, orderDeliverReducer } from './admin/orderReducers';
 import { uploadImageReducer } from './admin/uploadReducers';
 import { reviewCreateReducer, reviewUpdateReducer, reviewVoteReducer, reviewReportReducer } from './storefront/reviewReducers';
 import { couponValidateReducer } from './user/couponReducers';
 import { orderListMyReducer, orderCreateReducer, userOrderDetailsReducer, orderVerifyReducer, stripeIntentReducer } from './user/orderReducers';
+import { discountOfferListReducer, discountCouponListReducer, discountOfferCreateReducer, discountCouponCreateReducer } from './admin/discountReducers';
+import { contactListReducer } from './admin/contactReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -51,8 +52,6 @@ const rootReducer = combineReducers({
   storefrontProductList: storefrontProductListReducer,
   storefrontProductDetails: storefrontProductDetailsReducer,
   cart: cartReducer,
-  couponList: couponListReducer,
-  couponCreate: couponCreateReducer,
   orderList: orderListReducer,
   orderDetails: orderDetailsReducer,
   orderDeliver: orderDeliverReducer,
@@ -67,6 +66,11 @@ const rootReducer = combineReducers({
   userOrderDetails: userOrderDetailsReducer,
   orderVerify: orderVerifyReducer,
   stripeIntent: stripeIntentReducer,
+  discountOfferList: discountOfferListReducer,
+  discountCouponList: discountCouponListReducer,
+  discountOfferCreate: discountOfferCreateReducer,
+  discountCouponCreate: discountCouponCreateReducer,
+  contactList: contactListReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
