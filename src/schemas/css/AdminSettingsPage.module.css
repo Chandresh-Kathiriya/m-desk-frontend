@@ -1,0 +1,161 @@
+/* Uses your exact design system variables! */
+.page-wrapper {
+    background-color: var(--color-neutral-50);
+    min-height: 100vh;
+    padding: var(--space-8) var(--space-4);
+}
+
+.container {
+    max-width: 800px; /* Kept narrower for settings pages to look focused */
+    margin: 0 auto;
+}
+
+.page-title {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-neutral-900);
+    margin-bottom: var(--space-6);
+    letter-spacing: -0.02em;
+}
+
+.card {
+    background-color: var(--color-neutral-0);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-neutral-200);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-6);
+}
+
+.card-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-neutral-900);
+    margin-bottom: var(--space-2);
+}
+
+.description {
+    font-size: var(--text-sm);
+    color: var(--color-neutral-500);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--color-neutral-100);
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-4);
+    background-color: var(--color-neutral-50);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-6);
+}
+
+.setting-name {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-neutral-900);
+    margin-bottom: var(--space-1);
+}
+
+.setting-help {
+    font-size: var(--text-xs);
+    color: var(--color-neutral-600);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Toggle Switch (Reused from your beautiful design) */
+.switch-wrapper {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background-color: var(--color-neutral-300);
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-fast);
+}
+.switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+}
+.switch-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.switch-input:checked + .switch {
+    background-color: var(--color-primary-600);
+}
+.switch-input:checked + .switch::after {
+    transform: translateX(20px);
+}
+
+.actions-row {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-submit {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 var(--space-6);
+    height: 48px;
+    background-color: var(--color-neutral-900);
+    color: var(--color-neutral-0);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.btn-submit:hover:not(:disabled) {
+    background-color: var(--color-neutral-800);
+}
+.btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Alerts and Spinners */
+.alert {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+}
+.alert--error { background-color: var(--color-error-100); color: var(--color-error-700); border: 1px solid rgba(220, 38, 38, 0.2); }
+.alert--success { background-color: var(--color-success-100); color: var(--color-success-700); border: 1px solid rgba(22, 163, 74, 0.2); }
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-neutral-300);
+    border-top-color: var(--color-primary-600);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+.spinner--light { border-color: rgba(255,255,255,0.3); border-top-color: white; }
+.spinner-container { padding: var(--space-8); display: flex; justify-content: center; }
+
+@keyframes spin { to { transform: rotate(360deg); } }

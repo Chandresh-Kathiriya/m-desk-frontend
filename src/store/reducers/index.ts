@@ -30,6 +30,9 @@ import { couponValidateReducer } from './user/couponReducers';
 import { orderListMyReducer, orderCreateReducer, userOrderDetailsReducer, orderVerifyReducer, stripeIntentReducer } from './user/orderReducers';
 import { discountOfferListReducer, discountCouponListReducer, discountOfferCreateReducer, discountCouponCreateReducer } from './admin/discountReducers';
 import { contactListReducer } from './admin/contactReducers';
+import { settingsDetailsReducer, settingsUpdateReducer } from './admin/settingsReducers';
+import { userInvoiceByOrderReducer, userInvoiceDetailsReducer, userInvoiceDownloadReducer, userInvoiceListReducer } from './user/invoiceReducers';
+import { invoiceListReducer, invoiceDetailsReducer, adminInvoiceByOrderReducer, invoiceDownloadReducer } from './admin/invoiceReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -71,6 +74,16 @@ const rootReducer = combineReducers({
   discountOfferCreate: discountOfferCreateReducer,
   discountCouponCreate: discountCouponCreateReducer,
   contactList: contactListReducer,
+  invoiceList: invoiceListReducer,
+  settingsDetails: settingsDetailsReducer,
+  settingsUpdate: settingsUpdateReducer,
+  userInvoiceByOrder: userInvoiceByOrderReducer,
+  userInvoiceDetails: userInvoiceDetailsReducer,
+  invoiceDetails: invoiceDetailsReducer,
+  userInvoiceList: userInvoiceListReducer,
+  adminInvoiceByOrder: adminInvoiceByOrderReducer,
+  invoiceDownload: invoiceDownloadReducer,
+  userInvoiceDownload: userInvoiceDownloadReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

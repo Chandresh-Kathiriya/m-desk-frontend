@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../../store/reducers';
 import { getOrderDetails, deliverOrder } from '../../../store/actions/admin/orderActions';
+import { getAdminInvoiceByOrderId } from '../../../store/actions/admin/invoiceActions';
 import { ORDER_DELIVER_RESET } from '../../../store/constants/admin/orderConstants';
+import { ADMIN_INVOICE_BY_ORDER_RESET } from '../../../store/constants/admin/invoiceConstants';
 
 import styles from '../../../schemas/css/AdminOrderDetailsPage.module.css';
 
@@ -11,12 +13,19 @@ const AdminOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const dispatch = useDispatch<any>();
 
+    const adminAuth = useSelector((state: RootState) => state.adminAuth || state.userAuth);
+    const userInfo = (adminAuth as any).adminInfo || (adminAuth as any).userInfo;
+
     const orderDetails = useSelector((state: RootState) => state.orderDetails || {});
     const { order, loading, error } = orderDetails as any;
 
     const orderDeliver = useSelector((state: RootState) => state.orderDeliver || {});
     const { loading: loadingDeliver, success: successDeliver, error: errorDeliver } = orderDeliver as any;
 
+    const adminInvoiceByOrder = useSelector((state: RootState) => state.adminInvoiceByOrder || {});
+    const { invoice } = adminInvoiceByOrder as any;
+
+    // Fetch Order Data
     useEffect(() => {
         if (!order || order._id !== id || successDeliver) {
             dispatch({ type: ORDER_DELIVER_RESET });
@@ -25,6 +34,18 @@ const AdminOrderDetailsPage: React.FC = () => {
             }
         }
     }, [dispatch, id, order, successDeliver]);
+
+    // Check for an attached Customer Invoice
+    useEffect(() => {
+        if (id && userInfo) {
+            dispatch(getAdminInvoiceByOrderId(id));
+        }
+
+        // Cleanup: Reset the invoice state when leaving the page or changing orders
+        return () => {
+            dispatch({ type: ADMIN_INVOICE_BY_ORDER_RESET });
+        };
+    }, [dispatch, id, userInfo]);
 
     const deliverHandler = () => {
         if (order) {
@@ -170,6 +191,29 @@ const AdminOrderDetailsPage: React.FC = () => {
                                     <span className={styles['summary-total-label']}>Total</span>
                                     <span className={styles['summary-total-value']}>₹{order.totalPrice.toFixed(2)}</span>
                                 </div>
+
+                                {/* Official Admin Invoice Button */}
+                                {invoice?._id && (
+                                    <div style={{ margin: 'var(--space-4) 0' }}>
+                                        <Link 
+                                            to={`/admin/invoice/${invoice._id}`} 
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: '12px',
+                                                backgroundColor: 'var(--color-neutral-900)',
+                                                color: 'white',
+                                                textAlign: 'center',
+                                                borderRadius: 'var(--radius-md)',
+                                                fontWeight: 'bold',
+                                                textDecoration: 'none',
+                                                boxShadow: 'var(--shadow-sm)'
+                                            }}
+                                        >
+                                            View ERP Invoice
+                                        </Link>
+                                    </div>
+                                )}
 
                                 {!order.isDelivered && (
                                     <>

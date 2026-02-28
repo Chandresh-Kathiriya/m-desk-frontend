@@ -136,6 +136,26 @@ const Header: React.FC = () => {
                   </Link>
                 </li>
                 <li className={styles['header__nav-item']}>
+                  <Link to="/admin/invoices" className={styles['header__nav-link']}>
+                    <svg
+                      className={styles['header__nav-icon']}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                      <path d="M14 2v6h6"></path>
+                      <path d="M8 13h8"></path>
+                      <path d="M8 17h8"></path>
+                      <path d="M8 9h4"></path>
+                    </svg>
+                    {text.invoices}
+                  </Link>
+                </li>
+                <li className={styles['header__nav-item']}>
                   <Link to="/admin/coupons" className={styles['header__nav-link']}>
                     <svg
                       className={styles['header__nav-icon']}
@@ -150,6 +170,31 @@ const Header: React.FC = () => {
                       <circle cx="12" cy="12" r="2"></circle>
                     </svg>
                     {text.coupons}
+                  </Link>
+                </li>
+                <li className={styles['header__nav-item']}>
+                  <Link to="/admin/settings" className={styles['header__nav-link']}>
+                    <svg
+                      className={styles['header__nav-icon']}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 
+           1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 
+           1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 
+           1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 
+           1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0 
+           A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0 
+           a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0 
+           a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z">
+                      </path>
+                    </svg>
+                    {text.settings}
                   </Link>
                 </li>
 
@@ -199,6 +244,26 @@ const Header: React.FC = () => {
                       <path d="M12 22V12"></path>
                     </svg>
                     {text.orders}
+                  </Link>
+                </li>
+                <li className={styles['header__nav-item']}>
+                  <Link to="/invoices" className={styles['header__nav-link']}>
+                    <svg
+                      className={styles['header__nav-icon']}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                      <path d="M14 2v6h6"></path>
+                      <path d="M8 13h8"></path>
+                      <path d="M8 17h8"></path>
+                      <path d="M8 9h4"></path>
+                    </svg>
+                    {text.invoices}
                   </Link>
                 </li>
 

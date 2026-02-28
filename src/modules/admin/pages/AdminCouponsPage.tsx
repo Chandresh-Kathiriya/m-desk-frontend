@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import axios from 'axios';
 import { RootState } from '../../../store/reducers';
+
+// Redux Actions
 import { 
     listDiscountOffers, 
     listDiscountCoupons, 
@@ -9,6 +10,9 @@ import {
     createDiscountCoupon 
 } from '../../../store/actions/admin/discountActions';
 import { listContacts } from '../../../store/actions/admin/contactActions';
+import { listMasterData } from '../../../store/actions/admin/masterDataActions';
+
+// Redux Constants
 import { 
     DISCOUNT_OFFER_CREATE_RESET, 
     DISCOUNT_COUPON_CREATE_RESET 
@@ -19,11 +23,11 @@ import styles from '../../../schemas/css/AdminCouponsPage.module.css';
 const AdminCouponsPage: React.FC = () => {
     const dispatch = useDispatch<any>();
 
-    // Redux State for Auth
+    // --- REDUX AUTH STATE ---
     const adminAuth = useSelector((state: RootState) => state.adminAuth || {});
     const userInfo = (adminAuth as any).adminInfo || (adminAuth as any).userInfo;
 
-    // --- REDUX STATES ---
+    // --- REDUX DOMAIN STATES ---
     const discountOfferList = useSelector((state: RootState) => state.discountOfferList || {});
     const { offers = [], loading: loadingOffers, error: errorOffers } = discountOfferList as any;
 
@@ -39,11 +43,18 @@ const AdminCouponsPage: React.FC = () => {
     const discountCouponCreate = useSelector((state: RootState) => state.discountCouponCreate || {});
     const { loading: loadingCoupon, success: successCouponCreate, error: errorCouponCreate } = discountCouponCreate as any;
 
-    // Master Data State (Kept local to preserve your custom array mapping)
-    const [loadingMasterData, setLoadingMasterData] = useState(true);
-    const [masterDataOptions, setMasterDataOptions] = useState<any[]>([]);
+    // NEW: Redux Master Data State
+    const masterDataList = useSelector((state: RootState) => state.masterDataList || {});
+    const { 
+        categories = [], 
+        brands = [], 
+        styles: styleList = [], 
+        types = [], 
+        loading: loadingMasterData 
+    } = masterDataList as any;
 
-    // Form 1: Master Offer States (The Campaign)
+    // --- LOCAL UI/FORM STATES ---
+    // Form 1: Master Offer States
     const [offerName, setOfferName] = useState('');
     const [discountType, setDiscountType] = useState('percentage');
     const [discountValue, setDiscountValue] = useState<number | ''>('');
@@ -51,7 +62,7 @@ const AdminCouponsPage: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    // Form 2: Coupon Code States (Your Advanced Rules!)
+    // Form 2: Coupon Code States
     const [couponCode, setCouponCode] = useState('');
     const [selectedOffer, setSelectedOffer] = useState('');
     const [selectedContact, setSelectedContact] = useState('');
@@ -62,52 +73,20 @@ const AdminCouponsPage: React.FC = () => {
     const [couponExpiration, setCouponExpiration] = useState('');
 
     const pageError = errorOffers || errorCoupons || errorOfferCreate || errorCouponCreate;
-    const isPageLoading = loadingOffers || loadingCoupons || loadingMasterData;
+    const isPageLoading = loadingOffers || loadingCoupons;
 
-    // 1. Initial Data Fetch
+    // 1. Initial Data Fetch (All driven by Redux now!)
     useEffect(() => {
-        const fetchMasterData = async () => {
-            if (!userInfo) return;
-            try {
-                const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-                
-                const [catRes, brandRes, styleRes, typeRes] = await Promise.all([
-                    axios.get('/api/categories', config).catch(() => ({ data: null })),
-                    axios.get('/api/brands', config).catch(() => ({ data: null })),
-                    axios.get('/api/styles', config).catch(() => ({ data: null })),
-                    axios.get('/api/types', config).catch(() => ({ data: null }))
-                ]);
-
-                const getArray = (resData: any, key: string) => {
-                    if (!resData) return [];
-                    if (Array.isArray(resData)) return resData;
-                    if (Array.isArray(resData[key])) return resData[key];
-                    if (Array.isArray(resData.data)) return resData.data;
-                    if (Array.isArray(resData.records)) return resData.records;
-                    return [];
-                };
-
-                const combinedOptions = [
-                    ...getArray(catRes.data, 'categories').map((item: any) => ({ ...item, group: 'Category' })),
-                    ...getArray(brandRes.data, 'brands').map((item: any) => ({ ...item, group: 'Brand' })),
-                    ...getArray(styleRes.data, 'styles').map((item: any) => ({ ...item, group: 'Style' })),
-                    ...getArray(typeRes.data, 'types').map((item: any) => ({ ...item, group: 'Product Type' }))
-                ];
-
-                setMasterDataOptions(combinedOptions);
-                setLoadingMasterData(false);
-            } catch (err: any) {
-                console.error('Failed to load master data', err);
-                setLoadingMasterData(false);
-            }
-        };
-
         if (userInfo && userInfo.token) {
-            fetchMasterData();
-            // Dispatch our global Redux actions
             dispatch(listDiscountOffers());
             dispatch(listDiscountCoupons());
             dispatch(listContacts());
+            
+            // Fetch Master Data for the Checkboxes
+            dispatch(listMasterData('categories'));
+            dispatch(listMasterData('brands'));
+            dispatch(listMasterData('styles'));
+            dispatch(listMasterData('types'));
         }
     }, [dispatch, userInfo]);
 
@@ -120,7 +99,7 @@ const AdminCouponsPage: React.FC = () => {
             setEndDate('');
             alert('Master Offer Created!');
             dispatch({ type: DISCOUNT_OFFER_CREATE_RESET });
-            dispatch(listDiscountOffers()); // Refresh table data
+            dispatch(listDiscountOffers());
         }
     }, [successOfferCreate, dispatch]);
 
@@ -137,9 +116,17 @@ const AdminCouponsPage: React.FC = () => {
             setCouponExpiration('');
             alert('Coupon Code Generated!');
             dispatch({ type: DISCOUNT_COUPON_CREATE_RESET });
-            dispatch(listDiscountCoupons()); // Refresh table data
+            dispatch(listDiscountCoupons());
         }
     }, [successCouponCreate, dispatch]);
+
+    // Dynamic array calculation for the checkboxes (always in sync with Redux)
+    const masterDataOptions = [
+        ...categories.map((item: any) => ({ ...item, group: 'Category' })),
+        ...brands.map((item: any) => ({ ...item, group: 'Brand' })),
+        ...styleList.map((item: any) => ({ ...item, group: 'Style' })),
+        ...types.map((item: any) => ({ ...item, group: 'Product Type' }))
+    ];
 
     const submitOfferHandler = (e: React.FormEvent) => {
         e.preventDefault();
@@ -183,7 +170,7 @@ const AdminCouponsPage: React.FC = () => {
                     
                     {/* --- LEFT COLUMN: FORMS --- */}
                     <div>
-                        {/* FORM 1: MASTER OFFER (Just the Campaign details) */}
+                        {/* FORM 1: MASTER OFFER */}
                         <div className={styles.card} style={{ marginBottom: 'var(--space-6)' }}>
                             <h2 className={styles['card-title']}>1. Create Master Offer</h2>
                             <form onSubmit={submitOfferHandler}>
@@ -232,7 +219,7 @@ const AdminCouponsPage: React.FC = () => {
                             </form>
                         </div>
 
-                        {/* FORM 2: COUPON CODE (Your Advanced Rules!) */}
+                        {/* FORM 2: COUPON CODE */}
                         <div className={styles.card}>
                             <h2 className={styles['card-title']}>2. Generate Coupon Code</h2>
                             <form onSubmit={submitCouponHandler}>
@@ -359,7 +346,7 @@ const AdminCouponsPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* TABLE 2: ACTIVE COUPONS (Restored your custom conditions drop-down!) */}
+                                {/* TABLE 2: ACTIVE COUPONS */}
                                 <div className={`${styles.card} ${styles['table-card']}`}>
                                     <h2 className={styles['card-title']} style={{ padding: 'var(--space-6) var(--space-6) 0', border: 'none' }}>Active Coupon Codes</h2>
                                     <div className={styles['table-responsive']}>

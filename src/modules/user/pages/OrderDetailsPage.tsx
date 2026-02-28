@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../../store/reducers';
 import { getUserOrderDetails } from '../../../store/actions/user/orderActions';
+import { getUserInvoiceByOrderId } from '../../../store/actions/user/invoiceActions';
+import { USER_INVOICE_BY_ORDER_RESET } from '../../../store/constants/user/invoiceConstants';
 
 import styles from '../../../schemas/css/OrderDetailsPage.module.css';
 
@@ -10,12 +12,17 @@ const OrderDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<any>();
 
+  // --- REDUX STATES ---
   const userAuth = useSelector((state: RootState) => state.userAuth || {});
   const { userInfo } = userAuth as any;
 
   const userOrderDetails = useSelector((state: RootState) => state.userOrderDetails || {});
   const { order, loading, error } = userOrderDetails as any;
 
+  const userInvoiceByOrder = useSelector((state: RootState) => state.userInvoiceByOrder || {});
+  const { invoice } = userInvoiceByOrder as any;
+
+  // 1. Fetch Order Details
   useEffect(() => {
     if (userInfo && userInfo.token && id) {
       if (!order || order._id !== id) {
@@ -23,6 +30,18 @@ const OrderDetailsPage: React.FC = () => {
       }
     }
   }, [dispatch, id, userInfo, order]);
+
+  // 2. Check for an attached Customer Invoice once the order loads
+  useEffect(() => {
+    if (order && order._id) {
+      dispatch(getUserInvoiceByOrderId(order._id));
+    }
+    
+    // Cleanup: Reset the invoice state when leaving the page or changing orders
+    return () => {
+      dispatch({ type: USER_INVOICE_BY_ORDER_RESET });
+    };
+  }, [dispatch, order]);
 
   const formatOrderId = (orderId: string) => `ORD-${orderId.slice(-6).toUpperCase()}`;
 
@@ -196,7 +215,6 @@ const OrderDetailsPage: React.FC = () => {
               <div className={styles['summary-card__footer']}>
                 <div className={styles['summary-total-row']}>
                   <span className={styles['summary-total-label']}>Total</span>
-                  {/* Fixed markup mapping for Flexbox alignment */}
                   <span className={styles['summary-total-value']}>
                     <span className={styles['summary-currency']}>INR</span>
                     <span>₹{order.totalPrice?.toFixed(2)}</span>
@@ -204,6 +222,33 @@ const OrderDetailsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* --- Official Invoice Button --- */}
+            {invoice?._id && (
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <Link 
+                  to={`/invoice/${invoice._id}`} 
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: 'var(--color-primary-600)',
+                    color: 'white',
+                    textAlign: 'center',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: 'bold',
+                    textDecoration: 'none',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-700)'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'var(--color-primary-600)'}
+                >
+                  View Official Invoice
+                </Link>
+              </div>
+            )}
+
           </aside>
 
         </div>
