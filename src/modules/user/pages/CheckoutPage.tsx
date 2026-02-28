@@ -185,7 +185,7 @@ const CheckoutPage: React.FC = () => {
                                         </div>
                                         <div className={styles['form-group']}>
                                             <label htmlFor="postalCode" className={styles['form-label']}>Postal code</label>
-                                            <input id="postalCode" type="text" className={styles['form-input']} placeholder="e.g. 400001" value={postalCode} required onChange={(e) => setPostalCode(e.target.value)} />
+                                            <input id="postalCode" type="text" className={styles['form-input']} placeholder="e.g. 400001" value={postalCode} required onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, ''))} />
                                         </div>
                                     </div>
 

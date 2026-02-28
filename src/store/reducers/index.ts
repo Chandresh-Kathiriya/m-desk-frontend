@@ -29,10 +29,11 @@ import { reviewCreateReducer, reviewUpdateReducer, reviewVoteReducer, reviewRepo
 import { couponValidateReducer } from './user/couponReducers';
 import { orderListMyReducer, orderCreateReducer, userOrderDetailsReducer, orderVerifyReducer, stripeIntentReducer } from './user/orderReducers';
 import { discountOfferListReducer, discountCouponListReducer, discountOfferCreateReducer, discountCouponCreateReducer } from './admin/discountReducers';
-import { contactListReducer } from './admin/contactReducers';
+import { contactCreateReducer, contactDeleteReducer, contactListReducer, contactUpdateReducer } from './admin/contactReducers';
 import { settingsDetailsReducer, settingsUpdateReducer } from './admin/settingsReducers';
 import { userInvoiceByOrderReducer, userInvoiceDetailsReducer, userInvoiceDownloadReducer, userInvoiceListReducer } from './user/invoiceReducers';
 import { invoiceListReducer, invoiceDetailsReducer, adminInvoiceByOrderReducer, invoiceDownloadReducer } from './admin/invoiceReducers';
+import { purchaseBillReducer, purchaseConfirmReducer, purchaseCreateReducer, purchaseDetailsReducer, purchaseListReducer } from './admin/purchaseReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -84,6 +85,14 @@ const rootReducer = combineReducers({
   adminInvoiceByOrder: adminInvoiceByOrderReducer,
   invoiceDownload: invoiceDownloadReducer,
   userInvoiceDownload: userInvoiceDownloadReducer,
+  contactCreate: contactCreateReducer,
+  contactUpdate: contactUpdateReducer,
+  contactDelete: contactDeleteReducer,
+  purchaseCreate: purchaseCreateReducer,
+  purchaseDetails: purchaseDetailsReducer,
+  purchaseConfirm: purchaseConfirmReducer,
+  purchaseBill: purchaseBillReducer,
+  purchaseList: purchaseListReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

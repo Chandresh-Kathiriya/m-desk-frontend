@@ -9,7 +9,14 @@ export const storefrontProductListReducer = (state = { products: [] }, action: a
     case STOREFRONT_PRODUCT_LIST_REQUEST:
       return { loading: true, products: [] };
     case STOREFRONT_PRODUCT_LIST_SUCCESS:
-      return { loading: false, products: action.payload };
+      return {
+        loading: false,
+        products: action.payload.page === 1 || !action.payload.page
+          ? action.payload.products
+          : [...state.products, ...action.payload.products],
+        page: action.payload.page,
+        pages: action.payload.pages,
+      };
     case STOREFRONT_PRODUCT_LIST_FAIL:
       return { loading: false, error: action.payload };
     default:
@@ -25,6 +32,8 @@ export const storefrontProductDetailsReducer = (state = { product: { variants: [
       return { loading: false, product: action.payload };
     case 'STOREFRONT_PRODUCT_DETAILS_FAIL':
       return { loading: false, error: action.payload };
+    case 'STOREFRONT_PRODUCT_DETAILS_RESET':
+      return { product: {} }; // Resets the state back to empty
     default:
       return state;
   }

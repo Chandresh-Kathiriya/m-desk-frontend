@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { getStorefrontProductDetails } from '../../../store/actions/storefront/productActions';
 import { addToCart } from '../../../store/actions/user/cartActions';
 import { listMyOrders } from '../../../store/actions/user/orderActions';
 import { createReview, updateReview, voteReview, reportReview } from '../../../store/actions/storefront/reviewActions';
 import { REVIEW_CREATE_RESET, REVIEW_UPDATE_RESET, REVIEW_VOTE_RESET, REVIEW_REPORT_RESET } from '../../../store/constants/storefront/reviewConstants';
 import { RootState } from '../../../store/reducers';
-import Rating from '../../../common/components/Rating'; 
+import Rating from '../../../common/components/Rating';
 
 // Import CSS Module
 import styles from '../../../schemas/css/ProductDetailsPage.module.css';
@@ -16,6 +16,7 @@ const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<any>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Redux State
   const userAuth = useSelector((state: RootState) => state.userAuth || {});
@@ -52,7 +53,15 @@ const ProductDetailsPage: React.FC = () => {
   const [qty, setQty] = useState<number>(1);
 
   useEffect(() => {
-    if (id) dispatch(getStorefrontProductDetails(id));
+    if (id) {
+      dispatch(getStorefrontProductDetails(id));
+    }
+
+    // This cleanup runs instantly when the 'id' changes, wiping the old data
+    // before the new data even starts fetching.
+    return () => {
+      dispatch({ type: 'STOREFRONT_PRODUCT_DETAILS_RESET' });
+    };
   }, [dispatch, id]);
 
   useEffect(() => {
@@ -100,15 +109,44 @@ const ProductDetailsPage: React.FC = () => {
 
   useEffect(() => {
     if (product && product.variants && product.variants.length > 0) {
-      const firstAvailable = product.variants.find((v: any) => v.stock > 0) || product.variants[0];
-      setSelectedColor(firstAvailable.color);
-      setSelectedSize(firstAvailable.size);
 
+      // 1. Look for the ?color= parameter in the URL
+      const queryParams = new URLSearchParams(location.search);
+      const urlColor = queryParams.get('color');
+
+      let defaultColor = '';
+      let defaultSize = '';
+
+      // 2. If a color is in the URL, try to find a matching variant (case-insensitive)
+      if (urlColor) {
+        const variantMatch = product.variants.find(
+          (v: any) => v.color.toLowerCase().trim() === urlColor.toLowerCase().trim()
+        );
+        if (variantMatch) {
+          defaultColor = variantMatch.color;
+          defaultSize = variantMatch.size;
+        }
+      }
+
+      // 3. Fallback: If no color in URL (or invalid color), use the first available in stock
+      if (!defaultColor) {
+        const firstAvailable = product.variants.find((v: any) => v.stock > 0) || product.variants[0];
+        defaultColor = firstAvailable.color;
+        defaultSize = firstAvailable.size;
+      }
+
+      setSelectedColor(defaultColor);
+      setSelectedSize(defaultSize);
+
+      // 4. Set the main image specifically for the selected color
       if (product.images && product.images.length > 0) {
-        setMainImage(product.images[0].url);
+        const matchingImg = product.images.find(
+          (img: any) => img.color && img.color.toLowerCase().trim() === defaultColor.toLowerCase().trim()
+        );
+        setMainImage(matchingImg ? matchingImg.url : product.images[0].url);
       }
     }
-  }, [product]);
+  }, [product, location.search]); // <-- Don't forget to add location.search to dependencies!
 
   const filteredImages = product?.images?.filter(
     (img: any) => img.color && img.color.toLowerCase() === selectedColor.toLowerCase()
@@ -125,6 +163,11 @@ const ProductDetailsPage: React.FC = () => {
 
   if (loading) return <div className={styles['state-container']}><div className={styles.spinner}></div></div>;
   if (error) return <div className="container mt-8"><div className={`${styles['state-container']} ${styles['state-container--error']}`}><p className={styles['state-message']}>{error}</p></div></div>;
+
+  // If Redux has been reset or hasn't loaded the new product yet, render nothing or a spinner
+  if (!product || !product._id || product._id !== id) {
+    return <div className={styles['state-container']}><div className={styles.spinner}></div></div>;
+  }
   if (!product || !product._id) return null;
 
   // Helpers
@@ -185,13 +228,13 @@ const ProductDetailsPage: React.FC = () => {
   const sortedReviews = product?.reviews ? [...product.reviews].sort((a: any, b: any) => {
     if (sortBy === 'highest') return b.rating - a.rating;
     if (sortBy === 'helpful') return b.helpfulVotes - a.helpfulVotes;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); 
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   }) : [];
 
   return (
     <main className={styles['product-page']}>
       <div className={`container ${styles['product-page__container']}`}>
-        
+
         {/* Breadcrumb */}
         <nav className={styles.breadcrumb}>
           <Link to="/" className={styles['breadcrumb__link']}>
@@ -204,7 +247,7 @@ const ProductDetailsPage: React.FC = () => {
 
         {/* Product Split Layout */}
         <div className={styles['product-layout']}>
-          
+
           {/* LEFT: Image Gallery */}
           <section className={styles['product-gallery']}>
             <figure className={styles['product-gallery__main-wrapper']}>
@@ -232,11 +275,11 @@ const ProductDetailsPage: React.FC = () => {
 
           {/* RIGHT: Product Meta & Add to Cart */}
           <section className={styles['product-meta']}>
-            
+
             <div className={styles['product-meta__header']}>
               <span className={styles['product-meta__brand']}>{product.brand?.name || 'Exclusive Brand'}</span>
               <h1 className={styles['product-meta__title']}>{product.productName}</h1>
-              
+
               <div className={styles['product-meta__price-row']}>
                 <span className={styles['product-meta__price']}>
                   ₹{currentVariant ? getVariantPrice(currentVariant) : '---'}
@@ -268,9 +311,9 @@ const ProductDetailsPage: React.FC = () => {
                     onClick={() => setSelectedColor(color)}
                     title={color}
                   >
-                    <span 
-                      className={styles['variant-swatch__inner']} 
-                      style={{ 
+                    <span
+                      className={styles['variant-swatch__inner']}
+                      style={{
                         backgroundColor: color.toLowerCase() === 'white' ? '#f8f9fa' : color.toLowerCase(),
                         boxShadow: color.toLowerCase() === 'white' ? 'inset 0 2px 4px rgba(0,0,0,0.06)' : 'none'
                       }}>
@@ -329,23 +372,23 @@ const ProductDetailsPage: React.FC = () => {
                     </select>
                     <svg className={styles['custom-select-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </div>
-                  
+
                   <button
-                    className={`${styles.btn} ${styles['btn--primary']} ${styles['btn--full']} ${styles['product-actions__add-btn']}`}
+                    className={`btn btn--primary btn--full ${styles['product-actions__add-btn']}`}
                     onClick={addToCartHandler}
                   >
                     Add to Cart
                   </button>
                 </div>
               ) : (
-                <button className={`${styles.btn} ${styles['btn--secondary']} ${styles['btn--full']} ${styles['product-actions__add-btn']}`} disabled>
+                <button className={`btn btn--primary btn--full ${styles['product-actions__add-btn']}`} disabled>
                   Currently Unavailable
                 </button>
               )}
-              
+
               <p className={styles['product-meta__secure-text']}>
-                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                 Secure checkout & easy returns
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                Secure checkout & easy returns
               </p>
             </div>
 
@@ -356,7 +399,7 @@ const ProductDetailsPage: React.FC = () => {
         <section className={styles['reviews-section']} id="review-form">
           <header className={styles['reviews-section__header']}>
             <h2 className={styles['reviews-section__title']}>Customer Reviews</h2>
-            <div className={`${styles['custom-select-wrapper']} ${styles['reviews-section__sort']}`}>
+            {/* <div className={`${styles['custom-select-wrapper']} ${styles['reviews-section__sort']}`}>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -367,11 +410,11 @@ const ProductDetailsPage: React.FC = () => {
                 <option value="highest">Sort by Highest Rating</option>
               </select>
               <svg className={styles['custom-select-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </div>
+            </div> */}
           </header>
 
           <div className={styles['reviews-layout']}>
-            
+
             <div className={styles['reviews-list-container']}>
               {sortedReviews.length === 0 && (
                 <div className={`${styles['state-container']} ${styles['state-container--empty']} p-4`}>
@@ -402,9 +445,9 @@ const ProductDetailsPage: React.FC = () => {
                       </div>
 
                       <div className={styles['review-card__rating']}>
-                         <Rating value={review.rating} />
+                        <Rating value={review.rating} />
                       </div>
-                      
+
                       <p className={styles['review-card__comment']}>{review.comment}</p>
 
                       <div className={styles['review-card__actions']}>
@@ -433,7 +476,7 @@ const ProductDetailsPage: React.FC = () => {
                 <h3 className={styles['review-form-card__title']}>
                   {editingReviewId ? 'Edit Your Review' : 'Write a Review'}
                 </h3>
-                
+
                 {!userInfo ? (
                   <p className="text-muted text-sm">Please <Link to="/login" className="text-primary fw-bold">sign in</Link> to write a review.</p>
                 ) : !hasPurchased ? (
@@ -442,7 +485,7 @@ const ProductDetailsPage: React.FC = () => {
                   <form onSubmit={submitReviewHandler} className={styles['review-form']}>
                     {errorCreateReview && <div className={`${styles['state-container']} ${styles['state-container--error']} mb-3`}><p className={styles['state-message']}>{errorCreateReview}</p></div>}
                     {errorUpdateReview && <div className={`${styles['state-container']} ${styles['state-container--error']} mb-3`}><p className={styles['state-message']}>{errorUpdateReview}</p></div>}
-                    
+
                     <div className={styles['form-group']}>
                       <label className={styles['form-label']}>Rating</label>
                       <div className={styles['interactive-rating']}>

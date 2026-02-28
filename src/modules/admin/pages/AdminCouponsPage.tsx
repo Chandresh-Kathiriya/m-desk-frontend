@@ -3,19 +3,19 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../../store/reducers';
 
 // Redux Actions
-import { 
-    listDiscountOffers, 
-    listDiscountCoupons, 
-    createDiscountOffer, 
-    createDiscountCoupon 
+import {
+    listDiscountOffers,
+    listDiscountCoupons,
+    createDiscountOffer,
+    createDiscountCoupon
 } from '../../../store/actions/admin/discountActions';
 import { listContacts } from '../../../store/actions/admin/contactActions';
 import { listMasterData } from '../../../store/actions/admin/masterDataActions';
 
 // Redux Constants
-import { 
-    DISCOUNT_OFFER_CREATE_RESET, 
-    DISCOUNT_COUPON_CREATE_RESET 
+import {
+    DISCOUNT_OFFER_CREATE_RESET,
+    DISCOUNT_COUPON_CREATE_RESET
 } from '../../../store/constants/admin/discountConstants';
 
 import styles from '../../../schemas/css/AdminCouponsPage.module.css';
@@ -45,12 +45,12 @@ const AdminCouponsPage: React.FC = () => {
 
     // NEW: Redux Master Data State
     const masterDataList = useSelector((state: RootState) => state.masterDataList || {});
-    const { 
-        categories = [], 
-        brands = [], 
-        styles: styleList = [], 
-        types = [], 
-        loading: loadingMasterData 
+    const {
+        categories = [],
+        brands = [],
+        styles: styleList = [],
+        types = [],
+        loading: loadingMasterData
     } = masterDataList as any;
 
     // --- LOCAL UI/FORM STATES ---
@@ -81,7 +81,7 @@ const AdminCouponsPage: React.FC = () => {
             dispatch(listDiscountOffers());
             dispatch(listDiscountCoupons());
             dispatch(listContacts());
-            
+
             // Fetch Master Data for the Checkboxes
             dispatch(listMasterData('categories'));
             dispatch(listMasterData('brands'));
@@ -93,9 +93,9 @@ const AdminCouponsPage: React.FC = () => {
     // 2. Handle Offer Creation Success
     useEffect(() => {
         if (successOfferCreate) {
-            setOfferName(''); 
-            setDiscountValue(''); 
-            setStartDate(''); 
+            setOfferName('');
+            setDiscountValue('');
+            setStartDate('');
             setEndDate('');
             alert('Master Offer Created!');
             dispatch({ type: DISCOUNT_OFFER_CREATE_RESET });
@@ -106,13 +106,13 @@ const AdminCouponsPage: React.FC = () => {
     // 3. Handle Coupon Creation Success
     useEffect(() => {
         if (successCouponCreate) {
-            setCouponCode(''); 
-            setSelectedOffer(''); 
-            setSelectedContact(''); 
-            setMinCartValue(0); 
-            setApplicableRules([]); 
-            setIsFirstTimeUserOnly(false); 
-            setUsageLimit(100); 
+            setCouponCode('');
+            setSelectedOffer('');
+            setSelectedContact('');
+            setMinCartValue(0);
+            setApplicableRules([]);
+            setIsFirstTimeUserOnly(false);
+            setUsageLimit(100);
             setCouponExpiration('');
             alert('Coupon Code Generated!');
             dispatch({ type: DISCOUNT_COUPON_CREATE_RESET });
@@ -159,6 +159,19 @@ const AdminCouponsPage: React.FC = () => {
         return ruleIds.map(id => masterDataOptions.find(opt => opt._id === id)).filter(Boolean);
     };
 
+    const getLocalToday = () => {
+        const date = new Date();
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+    const today = getLocalToday();
+
+    // 2. Block negative symbols and 'e' from being typed
+    const blockInvalidNumChars = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (['-', '+', 'e', 'E'].includes(e.key)) {
+            e.preventDefault();
+        }
+    };
+
     return (
         <main className={styles['page-wrapper']}>
             <div className={styles.container}>
@@ -167,7 +180,7 @@ const AdminCouponsPage: React.FC = () => {
                 {pageError && <div className={`${styles.alert} ${styles['alert--error']}`}>{pageError}</div>}
 
                 <div className={styles.layout}>
-                    
+
                     {/* --- LEFT COLUMN: FORMS --- */}
                     <div>
                         {/* FORM 1: MASTER OFFER */}
@@ -189,7 +202,10 @@ const AdminCouponsPage: React.FC = () => {
                                     </div>
                                     <div className={styles['form-group']}>
                                         <label className={styles.label}>Value</label>
-                                        <input type="number" className={styles.input} required value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))} />
+                                        <input type="number" className={styles.input} required value={discountValue} min="0" onKeyDown={blockInvalidNumChars} onChange={(e) => {
+                                            const val = e.target.value;
+                                            setDiscountValue(val === '' ? '' : Math.max(0, Number(val)));
+                                        }} />
                                     </div>
                                 </div>
 
@@ -205,11 +221,19 @@ const AdminCouponsPage: React.FC = () => {
                                 <div className={styles['form-row']}>
                                     <div className={styles['form-group']}>
                                         <label className={styles.label}>Start Date</label>
-                                        <input type="date" className={styles.input} required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                        <input type="date" className={styles.input} required value={startDate} min={today} onChange={(e) => {
+                                            const selected = e.target.value;
+                                            setStartDate(selected < today ? today : selected); // Auto-correct to today if past
+                                            if (endDate && selected > endDate) setEndDate(selected); // Push end date forward if needed
+                                        }} />
                                     </div>
                                     <div className={styles['form-group']}>
                                         <label className={styles.label}>End Date</label>
-                                        <input type="date" className={styles.input} required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                                        <input type="date" className={styles.input} required value={endDate} min={startDate || today} onChange={(e) => {
+                                            const selected = e.target.value;
+                                            const minAllowed = startDate || today;
+                                            setEndDate(selected < minAllowed ? minAllowed : selected); // Auto-correct
+                                        }} />
                                     </div>
                                 </div>
 
@@ -247,7 +271,10 @@ const AdminCouponsPage: React.FC = () => {
 
                                 <div className={styles['form-group']}>
                                     <label className={styles.label}>Minimum Cart Value (₹)</label>
-                                    <input type="number" className={styles.input} value={minCartValue} onChange={(e) => setMinCartValue(Number(e.target.value))} />
+                                    <input type="number" className={styles.input} value={minCartValue} min="0" onKeyDown={blockInvalidNumChars} onChange={(e) => {
+                                        const val = e.target.value;
+                                        setMinCartValue(val === '' ? '' : Math.max(0, Number(val)));
+                                    }} />
                                 </div>
 
                                 <div className={styles['form-group']}>
@@ -256,12 +283,12 @@ const AdminCouponsPage: React.FC = () => {
                                         {loadingMasterData ? (
                                             <div className={styles['spinner-container']}><div className={styles.spinner}></div></div>
                                         ) : masterDataOptions.length === 0 ? (
-                                            <span style={{color: 'var(--color-error-600)', fontSize: 'var(--text-sm)'}}>No master data found.</span>
+                                            <span style={{ color: 'var(--color-error-600)', fontSize: 'var(--text-sm)' }}>No master data found.</span>
                                         ) : (
                                             masterDataOptions.map((option: any) => (
                                                 <label key={option._id} className={styles['checkbox-item']}>
-                                                    <input 
-                                                        type="checkbox" 
+                                                    <input
+                                                        type="checkbox"
                                                         className={styles['checkbox-input']}
                                                         checked={applicableRules.includes(option._id)}
                                                         onChange={(e) => {
@@ -270,7 +297,7 @@ const AdminCouponsPage: React.FC = () => {
                                                         }}
                                                     />
                                                     <span className={styles['checkbox-label']}>
-                                                        <strong>{option.name}</strong> 
+                                                        <strong>{option.name}</strong>
                                                         <span className={styles['checkbox-meta']}>({option.group})</span>
                                                     </span>
                                                 </label>
@@ -282,19 +309,25 @@ const AdminCouponsPage: React.FC = () => {
                                 <div className={styles['form-row']}>
                                     <div className={styles['form-group']}>
                                         <label className={styles.label}>Usage Limit</label>
-                                        <input type="number" className={styles.input} required value={usageLimit} onChange={(e) => setUsageLimit(Number(e.target.value))} />
+                                        <input type="number" className={styles.input} required value={usageLimit} min="1" onKeyDown={blockInvalidNumChars} onChange={(e) => {
+                                            const val = e.target.value;
+                                            setUsageLimit(val === '' ? '' : Math.max(1, Number(val)));
+                                        }} />
                                     </div>
                                     <div className={styles['form-group']}>
                                         <label className={styles.label}>Code Expiry</label>
-                                        <input type="date" className={styles.input} required value={couponExpiration} onChange={(e) => setCouponExpiration(e.target.value)} />
+                                        <input type="date" className={styles.input} required value={couponExpiration} min={today} onChange={(e) => {
+                                            const selected = e.target.value;
+                                            setCouponExpiration(selected < today ? today : selected); // Auto-correct
+                                        }} />
                                     </div>
                                 </div>
 
                                 <div className={styles['form-group']}>
                                     <label className={styles['switch-wrapper']}>
-                                        <input 
-                                            type="checkbox" 
-                                            className={styles['switch-input']} 
+                                        <input
+                                            type="checkbox"
+                                            className={styles['switch-input']}
                                             checked={isFirstTimeUserOnly}
                                             onChange={(e) => setIsFirstTimeUserOnly(e.target.checked)}
                                         />
@@ -303,7 +336,7 @@ const AdminCouponsPage: React.FC = () => {
                                     </label>
                                 </div>
 
-                                <button type="submit" className={styles['btn-submit']} disabled={loadingCoupon || offers.length === 0} style={{ backgroundColor: 'var(--color-primary-600)'}}>
+                                <button type="submit" className={styles['btn-submit']} disabled={loadingCoupon || offers.length === 0} style={{ backgroundColor: 'var(--color-primary-600)' }}>
                                     {loadingCoupon ? <div className={`${styles.spinner} ${styles['spinner--light']}`}></div> : 'Generate Code'}
                                 </button>
                             </form>
@@ -335,12 +368,12 @@ const AdminCouponsPage: React.FC = () => {
                                                         <td><strong>{o.name}</strong></td>
                                                         <td><span className={`${styles.badge} ${styles['badge--success']}`}>{o.discountType === 'percentage' ? `${o.discountValue}% OFF` : `₹${o.discountValue} OFF`}</span></td>
                                                         <td style={{ textTransform: 'capitalize' }}>{o.availableOn}</td>
-                                                        <td className={styles['align-right']} style={{ fontSize: '12px', color: 'var(--color-neutral-600)'}}>
-                                                            {new Date(o.startDate).toLocaleDateString()} <br/>to {new Date(o.endDate).toLocaleDateString()}
+                                                        <td className={styles['align-right']} style={{ fontSize: '12px', color: 'var(--color-neutral-600)' }}>
+                                                            {new Date(o.startDate).toLocaleDateString()} <br />to {new Date(o.endDate).toLocaleDateString()}
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {offers.length === 0 && <tr><td colSpan={4} style={{textAlign: 'center', padding: 'var(--space-6)'}}>No programs active.</td></tr>}
+                                                {offers.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', padding: 'var(--space-6)' }}>No programs active.</td></tr>}
                                             </tbody>
                                         </table>
                                     </div>
@@ -365,14 +398,14 @@ const AdminCouponsPage: React.FC = () => {
                                                     <tr key={c._id}>
                                                         <td className={styles['text-code']}>
                                                             {c.code}
-                                                            <div style={{fontSize: '11px', marginTop: '4px'}}>
+                                                            <div style={{ fontSize: '11px', marginTop: '4px' }}>
                                                                 {c.contact ? <span className={`${styles.badge} ${styles['badge--info']}`}>{c.contact.name}</span> : ''}
                                                             </div>
                                                         </td>
                                                         <td className="text-muted">{c.discountOffer?.name || 'Deleted'}</td>
                                                         <td>
-                                                            {c.isFirstTimeUserOnly && <div className={`${styles.badge} ${styles['badge--info']}`} style={{marginBottom: '4px'}}>New Users</div>}
-                                                            {c.minCartValue > 0 && <div style={{fontSize: '12px', marginBottom: '4px'}}>Min: ₹{c.minCartValue}</div>}
+                                                            {c.isFirstTimeUserOnly && <div className={`${styles.badge} ${styles['badge--info']}`} style={{ marginBottom: '4px' }}>New Users</div>}
+                                                            {c.minCartValue > 0 && <div style={{ fontSize: '12px', marginBottom: '4px' }}>Min: ₹{c.minCartValue}</div>}
                                                             <div>
                                                                 {c.applicableRules && c.applicableRules.length > 0 ? (
                                                                     <details className={styles['rules-details']}>
@@ -398,7 +431,7 @@ const AdminCouponsPage: React.FC = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {coupons.length === 0 && <tr><td colSpan={5} style={{textAlign: 'center', padding: 'var(--space-6)'}}>No coupons generated yet.</td></tr>}
+                                                {coupons.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 'var(--space-6)' }}>No coupons generated yet.</td></tr>}
                                             </tbody>
                                         </table>
                                     </div>

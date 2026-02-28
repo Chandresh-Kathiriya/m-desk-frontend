@@ -31,6 +31,10 @@ import AdminCouponsPage from './modules/admin/pages/AdminCouponsPage.tsx';
 import AdminSettingsPage from './modules/admin/pages/AdminSettingsPage.tsx';
 import AdminInvoicesPage from './modules/admin/pages/AdminInvoicesPage.tsx';
 import AdminInvoiceDetailsPage from './modules/admin/pages/AdminInvoiceDetailsPage';
+import AdminCreatePurchaseOrderPage from './modules/admin/pages/AdminCreatePurchaseOrderPage.tsx';
+import AdminPurchaseOrderDetailsPage from './modules/admin/pages/AdminPurchaseOrderDetailsPage.tsx';
+import AdminContactsPage from './modules/admin/pages/AdminContactsPage.tsx';
+import AdminPurchaseOrdersPage from './modules/admin/pages/AdminPurchaseOrdersPage.tsx';
 
 function App() {
   return (
@@ -68,6 +72,10 @@ function App() {
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
           <Route path="/admin/invoices" element={<AdminInvoicesPage />} />
           <Route path="/admin/invoice/:id" element={<AdminInvoiceDetailsPage />} />
+          <Route path="/admin/purchase/create" element={<AdminCreatePurchaseOrderPage />} />
+          <Route path="/admin/purchase/:id" element={<AdminPurchaseOrderDetailsPage />} />
+          <Route path="/admin/contacts" element={<AdminContactsPage />} />
+          <Route path="/admin/purchases" element={<AdminPurchaseOrdersPage />} />
 
         </Routes>
       </Layout>

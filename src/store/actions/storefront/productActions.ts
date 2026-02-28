@@ -5,16 +5,17 @@ import {
   STOREFRONT_PRODUCT_LIST_FAIL,
 } from '../../constants/storefront/productConstants';
 
-export const listStorefrontProducts = () => async (dispatch: any) => {
+// --- NEW: Added pageNumber parameter with a default of 1 ---
+export const listStorefrontProducts = (pageNumber = 1) => async (dispatch: any) => {
   try {
     dispatch({ type: STOREFRONT_PRODUCT_LIST_REQUEST });
 
-    // Hitting the new public route we just created!
-    const { data } = await axios.get('/api/products/public');
+    // --- NEW: Pass the page parameter in the query string ---
+    const { data } = await axios.get(`/api/products/public?page=${pageNumber}`);
 
     dispatch({
       type: STOREFRONT_PRODUCT_LIST_SUCCESS,
-      payload: data.products,
+      payload: data, // <-- CRUCIAL: Pass the whole data object so reducer gets `pages` info!
     });
   } catch (error: any) {
     dispatch({
@@ -28,7 +29,6 @@ export const getStorefrontProductDetails = (id: string) => async (dispatch: any)
   try {
     dispatch({ type: 'STOREFRONT_PRODUCT_DETAILS_REQUEST' });
 
-    // Assuming your public route looks something like this based on your controller
     const { data } = await axios.get(`/api/products/public/${id}`);
 
     dispatch({
