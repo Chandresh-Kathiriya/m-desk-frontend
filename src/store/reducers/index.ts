@@ -36,6 +36,12 @@ import { invoiceListReducer, invoiceDetailsReducer, adminInvoiceByOrderReducer, 
 import { purchaseCreateReducer, purchaseDetailsReducer, purchaseListReducer, purchaseReceiveReducer } from './admin/purchaseReducers';
 import { billListReducer, billDownloadReducer, billDetailsReducer } from './admin/billReducers';
 import { paymentCreateReducer } from './admin/paymentReducers';
+import {
+  reportSalesProductsReducer,
+  reportPurchasesProductsReducer,
+  reportSalesCustomersReducer,
+  reportPurchasesVendorsReducer
+} from './admin/reportReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -98,6 +104,10 @@ const rootReducer = combineReducers({
   billDownload: billDownloadReducer,
   billDetails: billDetailsReducer,
   paymentCreate: paymentCreateReducer,
+  reportSalesProducts: reportSalesProductsReducer,
+  reportPurchasesProducts: reportPurchasesProductsReducer,
+  reportSalesCustomers: reportSalesCustomersReducer,
+  reportPurchasesVendors: reportPurchasesVendorsReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

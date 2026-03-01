@@ -37,6 +37,7 @@ import AdminContactsPage from './modules/admin/pages/AdminContactsPage.tsx';
 import AdminPurchaseOrdersPage from './modules/admin/pages/AdminPurchaseOrdersPage.tsx';
 import AdminVendorBillDetailsPage from './modules/admin/pages/AdminVendorBillDetailsPage.tsx';
 import AdminVendorBillsPage from './modules/admin/pages/AdminVendorBillsPage.tsx';
+import AdminReportsPage from './modules/admin/pages/AdminReportsPage.tsx';
 
 function App() {
   return (
@@ -80,6 +81,7 @@ function App() {
           <Route path="/admin/purchases" element={<AdminPurchaseOrdersPage />} />
           <Route path="/admin/bills/:id" element={<AdminVendorBillDetailsPage />} />
           <Route path="/admin/bills" element={<AdminVendorBillsPage />} />
+          <Route path="/admin/reports" element={<AdminReportsPage />} />
 
         </Routes>
       </Layout>
