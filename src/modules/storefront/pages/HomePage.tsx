@@ -16,6 +16,9 @@ const HomePage: React.FC = () => {
   // State for Infinite Scrolling
   const [pageNumber, setPageNumber] = useState(1);
 
+  // --- FIX 1: Local state to accumulate products so they append instead of replace! ---
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+
   const storefrontProductList = useSelector((state: RootState) => state.storefrontProductList || {} as any);
   // Assuming your backend returns 'pages' (total pages) to know when to stop fetching
   const { loading, error, products, pages } = storefrontProductList;
@@ -25,6 +28,25 @@ const HomePage: React.FC = () => {
     // Pass the pageNumber to your action to fetch the specific page
     dispatch(listStorefrontProducts(pageNumber));
   }, [dispatch, pageNumber]);
+
+  // --- FIX 1 (Continued): Append incoming Redux products to our local list ---
+  useEffect(() => {
+    if (products && Array.isArray(products)) {
+      if (pageNumber === 1) {
+        setAllProducts(products as any[]); // Reset on first load
+      } else {
+        setAllProducts((prev: any[]) => {
+          // Filter out any duplicates to prevent React key errors
+          const existingIds = new Set(prev.map((p: any) => p._id));
+
+          // Explicitly cast products as any[] to fix the 'never' TypeScript error
+          const newProducts = (products as any[]).filter((p: any) => !existingIds.has(p._id));
+
+          return [...prev, ...newProducts]; // Append new items to the bottom!
+        });
+      }
+    }
+  }, [products, pageNumber]);
 
   // 2. Infinite Scroll Observer Setup
   const observer = useRef<IntersectionObserver | null>(null);
@@ -42,36 +64,27 @@ const HomePage: React.FC = () => {
     if (node) observer.current.observe(node);
   }, [loading, pageNumber, pages]);
 
-  // 3. FLATTEN PRODUCTS BY COLOR
+  // 3. FLATTEN PRODUCTS BY COLOR (Now using allProducts instead of products!)
   const flattenedProducts = useMemo(() => {
-    // Check if products exists AND is actually an array
-    if (!products || !Array.isArray(products)) return [];
+    if (!allProducts || allProducts.length === 0) return [];
 
     const flatList: any[] = [];
 
-    // Tell TypeScript explicitly that products is an array of any: (products as any[])
-    (products as any[]).forEach((product: any) => {
-      // Extract unique colors from the variants array
+    allProducts.forEach((product: any) => {
       const uniqueColors = Array.from(new Set(product.variants?.map((v: any) => v.color))) as string[];
 
-      // If a product has no variants/colors, push it as is
       if (!uniqueColors || uniqueColors.length === 0) {
         flatList.push({ ...product, originalId: product._id, displayColor: null });
         return;
       }
 
-      // Create a separate card for EVERY color
       uniqueColors.forEach(color => {
-        // Get only the variants that match this color
         const colorVariants = product.variants.filter((v: any) => v.color === color);
-
-        // Case-insensitive and space-trimmed image matching
         const colorImages = product.images?.filter((img: any) => {
           if (!img.color) return false;
           return img.color.toLowerCase().trim() === color.toLowerCase().trim();
         });
 
-        // Fallback to the main product images if no specific color image is found
         const displayImages = colorImages?.length > 0 ? colorImages : product.images;
 
         flatList.push({
@@ -86,7 +99,7 @@ const HomePage: React.FC = () => {
     });
 
     return flatList;
-  }, [products]);
+  }, [allProducts]);
 
   // Helpers
   const getThumbnail = (images: any[]) => {
@@ -166,24 +179,25 @@ const HomePage: React.FC = () => {
                   className={styles['product-card']}
                   ref={isLastElement ? lastProductElementRef : null}
                 >
-                  {/* Notice we pass the displayColor in the URL so the Product Details page can auto-select it! */}
                   <Link to={`/product/${product.originalId}${product.displayColor ? `?color=${product.displayColor}` : ''}`} className={styles['product-card__link']}>
 
-                    <div className={styles['product-card__image-wrapper']}>
+                    {/* --- FIX 2: Added aspect-ratio and background color to prevent layout shifting/blocking --- */}
+                    <div className={styles['product-card__image-wrapper']} style={{ aspectRatio: '4/5', backgroundColor: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
                       <img
                         className={styles['product-card__image']}
                         src={getThumbnail(product.images)}
                         alt={`${product.productName} in ${product.displayColor || ''}`}
                         loading="lazy"
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                       {product.displayColor && (
-                        <span className={styles['product-card__badge']} style={{ backgroundColor: 'var(--color-neutral-800)', top: '10px', right: '10px', left: 'auto' }}>
+                        <span className={styles['product-card__badge']} style={{ backgroundColor: 'var(--color-neutral-800)', top: '10px', right: '10px', left: 'auto', zIndex: 2 }}>
                           {product.displayColor}
                         </span>
                       )}
 
                       {viewMode === 'grid' && (
-                        <div className={styles['product-card__overlay']}>
+                        <div className={styles['product-card__overlay']} style={{ zIndex: 2 }}>
                           <span className={`${styles.btn} ${styles['btn--secondary']} ${styles['btn--full']}`}>
                             View Details
                           </span>
