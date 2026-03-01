@@ -5,7 +5,7 @@ import { RootState } from '../../../store/reducers';
 import { getUserInvoiceDetails, downloadUserInvoice } from '../../../store/actions/user/invoiceActions';
 import { USER_INVOICE_DETAILS_RESET, USER_INVOICE_DOWNLOAD_RESET } from '../../../store/constants/user/invoiceConstants';
 
-import styles from '../../../schemas/css/AdminCouponsPage.module.css';
+import styles from '../../../schemas/css/InvoiceDetailsPage.module.css';
 
 const InvoiceDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -42,9 +42,9 @@ const InvoiceDetailsPage: React.FC = () => {
         }
     }, [downloadSuccess, downloadError, dispatch]);
 
-    if (loading) return <div className={styles['spinner-container']}><div className={styles.spinner}></div></div>;
-    if (error) return <div className={`${styles.alert} ${styles['alert--error']}`}>{error}</div>;
-    if (!invoice) return <div>No Invoice Found</div>;
+    if (loading) return <div className={styles['spinner-container']}><div className={`${styles.spinner} ${styles['spinner--large']}`}></div></div>;
+    if (error) return <div className={styles.container} style={{ paddingTop: '2rem' }}><div className={`${styles.alert} ${styles['alert--error']}`}>{error}</div></div>;
+    if (!invoice) return <div className={styles.container} style={{ paddingTop: '2rem' }}><h4>No Invoice Found</h4></div>;
 
     // Helper to safely get the first image
     const getProductImage = (product: any) => {
@@ -63,81 +63,91 @@ const InvoiceDetailsPage: React.FC = () => {
 
     return (
         <main className={styles['page-wrapper']}>
-            <div className={styles.container} style={{ maxWidth: '800px' }}>
-                <Link to="/invoices" style={{ textDecoration: 'none', color: 'var(--color-primary-600)', marginBottom: '1rem', display: 'inline-block', fontWeight: 'bold' }}>
-                    &larr; Back to Invoices
+            <div className={styles.container}>
+                
+                <Link to="/invoices" className={styles['back-link']}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Back to Invoices
                 </Link>
 
                 <div className={styles.card}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-neutral-200)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                        <h1 className={styles['page-title']} style={{ margin: 0 }}>Invoice {invoice.invoiceNumber}</h1>
-                        <span className={`${styles.badge} ${invoice.status === 'paid' ? styles['badge--success'] : styles['badge--error']}`} style={{ fontSize: '14px', padding: '8px 16px' }}>
-                            {invoice.status.toUpperCase()}
+                    
+                    <div className={styles['card-header']}>
+                        <h1 className={styles['page-title']}>Invoice {invoice.invoiceNumber}</h1>
+                        <span className={`${styles.badge} ${invoice.status === 'paid' ? styles['badge--success'] : styles['badge--error']}`}>
+                            {invoice.status}
                         </span>
                     </div>
 
-                    <div className={styles['form-row']} style={{ marginBottom: '2rem' }}>
-                        <div>
-                            <h3 style={{ fontSize: '14px', color: 'var(--color-neutral-500)', textTransform: 'uppercase' }}>Billed To</h3>
-                            <p style={{ margin: '4px 0', fontWeight: 'bold', fontSize: '1.1rem' }}>{invoice.customer?.name}</p>
-                            <p style={{ margin: 0, color: 'var(--color-neutral-600)' }}>{invoice.customer?.email}</p>
+                    <div className={styles['info-grid']}>
+                        <div className={styles['info-column']}>
+                            <h3 className={styles['info-label']}>Billed To</h3>
+                            <div className={styles['info-value-lg']}>{invoice.customer?.name}</div>
+                            <div className={styles['info-value']}>{invoice.customer?.email}</div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <p style={{ margin: '4px 0' }}><strong>Invoice Date:</strong> {new Date(invoice.invoiceDate).toLocaleDateString()}</p>
-                            <p style={{ margin: '4px 0' }}><strong>Linked Order:</strong> {invoice.salesOrder?._id}</p>
+                        <div className={`${styles['info-column']} ${styles['info-column--right']}`}>
+                            <div className={styles['info-value']}>
+                                <strong className={styles['info-label']} style={{ display: 'inline', marginRight: '8px' }}>Invoice Date:</strong> 
+                                {new Date(invoice.invoiceDate).toLocaleDateString()}
+                            </div>
+                            <div className={styles['info-value']}>
+                                <strong className={styles['info-label']} style={{ display: 'inline', marginRight: '8px' }}>Linked Order:</strong> 
+                                {invoice.salesOrder?._id ? invoice.salesOrder._id.slice(-6).toUpperCase() : 'N/A'}
+                            </div>
                         </div>
                     </div>
 
-                    {/* INVOICE ITEMS */}
-                    <table className={styles['admin-table']} style={{ marginBottom: '2rem' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: 'var(--color-neutral-100)' }}>
-                                <th>Product Details</th>
-                                <th className={styles['align-center']}>Qty</th>
-                                <th className={styles['align-right']}>Unit Price</th>
-                                <th className={styles['align-right']}>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {invoice.items.map((item: any, index: number) => (
-                                <tr key={index}>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <img
-                                                src={getProductImage(item.product)}
-                                                alt={item.product?.productName || 'Product'}
-                                                style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--color-neutral-200)' }}
-                                            />
-                                            <span style={{ fontWeight: 'bold', color: 'var(--color-neutral-800)' }}>
-                                                {item.product?.productName || 'Unknown Product'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className={styles['align-center']} style={{ verticalAlign: 'middle' }}>{item.quantity}</td>
-                                    <td className={styles['align-right']} style={{ verticalAlign: 'middle' }}>₹{item.unitPrice.toFixed(2)}</td>
-                                    <td className={styles['align-right']} style={{ verticalAlign: 'middle' }}><strong>₹{item.totalAmount.toFixed(2)}</strong></td>
+                    {/* INVOICE ITEMS TABLE */}
+                    <div className={styles['table-responsive']}>
+                        <table className={styles['user-table']}>
+                            <thead>
+                                <tr>
+                                    <th>Product Details</th>
+                                    <th className={styles['align-center']}>Qty</th>
+                                    <th className={styles['align-right']}>Unit Price</th>
+                                    <th className={styles['align-right']}>Total</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {invoice.items.map((item: any, index: number) => (
+                                    <tr key={index}>
+                                        <td>
+                                            <div className={styles['product-cell']}>
+                                                <img src={getProductImage(item.product)} alt="Product" className={styles['product-img']} />
+                                                <span className={styles['product-name']}>
+                                                    {item.product?.productName || 'Unknown Product'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className={styles['align-center']}>{item.quantity}</td>
+                                        <td className={styles['align-right']}>₹{item.unitPrice.toFixed(2)}</td>
+                                        <td className={`${styles['align-right']} ${styles['text-bold']}`}>₹{item.totalAmount.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {/* TOTALS SECTION */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <div style={{ width: '320px', backgroundColor: 'var(--color-neutral-50)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-neutral-200)' }}>
+                    <div className={styles['summary-wrapper']}>
+                        <div className={styles['summary-box']}>
 
                             {/* SMART DISCOUNT CALCULATION */}
                             {(() => {
                                 const subtotal = invoice.items.reduce((acc: number, item: any) => acc + item.totalAmount, 0);
                                 const shipping = invoice.salesOrder?.shippingPrice || 0;
-                                const displayDiscount = invoice.discountAmount > 0
-                                    ? invoice.discountAmount
+                                const displayDiscount = invoice.discountAmount > 0 
+                                    ? invoice.discountAmount 
                                     : (subtotal + shipping) - invoice.totalAmount;
 
                                 if (displayDiscount > 0.01) { 
                                     return (
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                        <div className={styles['summary-row']}>
                                             <span>Discount Applied:</span>
-                                            <span style={{ color: 'var(--color-success-600)', fontWeight: 'bold' }}>- ₹{displayDiscount.toFixed(2)}</span>
+                                            <span className={styles['text-success']}>- ₹{displayDiscount.toFixed(2)}</span>
                                         </div>
                                     );
                                 }
@@ -145,18 +155,18 @@ const InvoiceDetailsPage: React.FC = () => {
                             })()}
                             
                             {/* Shipping Display */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: 'var(--color-neutral-700)' }}>
+                            <div className={styles['summary-row']}>
                                 <span>Shipping Charge:</span>
                                 <span>
                                     {invoice.salesOrder?.shippingPrice === 0
-                                        ? <span style={{ color: 'var(--color-success-600)', fontWeight: 'bold' }}>Free</span>
+                                        ? <span className={styles['text-success']}>Free</span>
                                         : `₹${(invoice.salesOrder?.shippingPrice || 0).toFixed(2)}`
                                     }
                                 </span>
                             </div>
 
                             {/* Final Total */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid var(--color-neutral-300)', paddingTop: '12px', marginTop: '4px', fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-neutral-900)' }}>
+                            <div className={`${styles['summary-row']} ${styles['summary-row--total']}`}>
                                 <span>Total Paid:</span>
                                 <span>₹{invoice.totalAmount.toFixed(2)}</span>
                             </div>
@@ -164,14 +174,24 @@ const InvoiceDetailsPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
+                    <div className={styles['action-area']}>
                         <button 
-                            className={styles['btn-submit']} 
-                            style={{ width: 'auto', display: 'inline-flex', padding: '0 32px' }}
+                            className={`${styles.btn} ${styles['btn-primary']}`}
                             onClick={downloadPDFHandler}
                             disabled={downloading}
                         >
-                            {downloading ? 'Generating PDF...' : 'Download PDF Invoice'}
+                            {downloading ? (
+                                <><div className={styles.spinner}></div> Generating PDF...</>
+                            ) : (
+                                <>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Download PDF Invoice
+                                </>
+                            )}
                         </button>
                     </div>
 

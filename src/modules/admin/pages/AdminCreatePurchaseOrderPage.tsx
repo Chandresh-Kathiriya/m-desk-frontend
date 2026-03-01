@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../../store/reducers';
 import { listContacts } from '../../../store/actions/admin/contactActions';
-import { listAdminProducts } from '../../../store/actions/admin/productActions'; 
+import { listAdminProducts } from '../../../store/actions/admin/productActions';
 import { createPurchaseOrder } from '../../../store/actions/admin/purchaseActions';
 import { PURCHASE_CREATE_RESET } from '../../../store/constants/admin/purchaseConstants';
 
@@ -34,7 +34,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
     useEffect(() => {
         if (userInfo && userInfo.token) {
             dispatch(listContacts());
-            dispatch(listAdminProducts()); 
+            dispatch(listAdminProducts());
         }
     }, [dispatch, userInfo]);
 
@@ -59,13 +59,35 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
         const newItems = [...items];
         newItems[index][field] = value;
 
-        // Auto-fill SKU and Price if product changes
+        // Auto-fill SKU and Price if PRODUCT changes
         if (field === 'product') {
             const selectedProduct = products.find((p: any) => p._id === value);
+
             if (selectedProduct && selectedProduct.variants?.length > 0) {
                 newItems[index].sku = selectedProduct.variants[0].sku;
                 newItems[index].unitPrice = selectedProduct.variants[0].purchasePrice || 0;
                 newItems[index].tax = selectedProduct.variants[0].purchaseTax || 0;
+            } else {
+                newItems[index].sku = '';
+                newItems[index].unitPrice = 0;
+                newItems[index].tax = 0;
+            }
+        }
+        // --- Auto-fill Price and Tax if SKU changes ---
+        else if (field === 'sku') {
+            const productId = newItems[index].product;
+
+            const selectedProduct = products.find((p: any) => p._id === productId);
+
+            if (selectedProduct && selectedProduct.variants) {
+
+                // Using String() to prevent exact match failures if one is a number and one is a string
+                const selectedVariant = selectedProduct.variants.find((v: any) => String(v.sku) === String(value));
+
+                if (selectedVariant) {
+                    newItems[index].unitPrice = selectedVariant.purchasePrice || 0;
+                    newItems[index].tax = selectedVariant.purchaseTax || 0;
+                }
             }
         }
 
@@ -73,6 +95,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
         const qty = Number(newItems[index].quantity) || 0;
         const price = Number(newItems[index].unitPrice) || 0;
         const tax = Number(newItems[index].tax) || 0;
+
         newItems[index].totalAmount = (qty * price) * (1 + (tax / 100));
 
         setItems(newItems);
@@ -100,7 +123,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
         <main className={styles['page-wrapper']}>
             <div className={styles.container}>
                 <h1 className={styles['page-title']}>Create Purchase Order</h1>
-                
+
                 {pageError && (
                     <div className={`${styles.alert} ${styles['alert--error']}`}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
@@ -111,7 +134,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
                 )}
 
                 <form onSubmit={submitHandler} className={styles.card}>
-                    
+
                     {/* --- VENDOR SELECTION --- */}
                     <div className={styles['form-group']}>
                         <label className={styles.label}>Select Vendor</label>
@@ -123,7 +146,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
 
                     {/* --- ITEMS TABLE --- */}
                     <h2 className={styles['section-title']}>Order Items</h2>
-                    
+
                     <div className={styles['table-responsive']}>
                         <table className={styles['po-table']}>
                             <thead>
@@ -177,7 +200,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <button type="button" className={`${styles.btn} ${styles['btn-dashed']}`} onClick={addItemRow}>
                         + Add Another Item
                     </button>
@@ -188,7 +211,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
                             <span className={styles['po-total-label']}>Total Amount:</span>
                             <span className={styles['po-total-value']}>₹{cartTotal.toFixed(2)}</span>
                         </div>
-                        
+
                         <button type="submit" className={`${styles.btn} ${styles['btn-primary']}`} style={{ minWidth: '220px' }} disabled={loadingCreate}>
                             {loadingCreate ? (
                                 <><div className={`${styles.spinner} ${styles['spinner--light']}`}></div> Processing...</>

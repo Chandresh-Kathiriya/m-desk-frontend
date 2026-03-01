@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../../store/reducers';
-import { listPurchaseOrders } from '../../../store/actions/admin/purchaseActions';
+import { listPurchaseOrders, downloadAdminPO } from '../../../store/actions/admin/purchaseActions'; // <-- Import download action
 
 import styles from '../../../schemas/css/AdminPurchaseOrdersPage.module.css'; 
 
@@ -86,9 +86,20 @@ const AdminPurchaseOrdersPage: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className={styles['align-center']}>
-                                                <Link to={`/admin/purchase/${order._id}`} className={`${styles.btn} ${styles['btn-outline']}`}>
-                                                    View Details
-                                                </Link>
+                                                {/* --- ADDED FLEX LAYOUT FOR BUTTONS --- */}
+                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                                    <Link to={`/admin/purchase/${order._id}`} className={`${styles.btn} ${styles['btn-outline']}`} style={{ padding: '4px 12px' }}>
+                                                        View
+                                                    </Link>
+                                                    <button 
+                                                        onClick={() => dispatch(downloadAdminPO(order._id, order.orderNumber))}
+                                                        className={`${styles.btn} ${styles['btn-outline']}`} 
+                                                        style={{ padding: '4px 8px' }}
+                                                        title="Download PDF"
+                                                    >
+                                                        📄 PDF
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
