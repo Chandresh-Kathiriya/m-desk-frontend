@@ -6,7 +6,8 @@ import {
   productDetailsReducer,
   productCreateReducer,
   productUpdateReducer,
-  productDeleteReducer
+  productDeleteReducer,
+  productListAdminReducer
 } from './admin/productReducers';
 import {
   categoryListReducer,
@@ -18,12 +19,14 @@ import {
 import {
   masterDataListReducer,
   masterDataCreateReducer,
-  masterDataUpdateReducer
+  masterDataUpdateReducer,
+  masterDataTabsReducer,
+  masterDataTabCreateReducer
 } from './admin/masterDataReducers';
 import { inventoryListReducer, inventoryUpdateReducer } from './admin/inventoryReducers';
-import { storefrontProductListReducer, storefrontProductDetailsReducer } from './storefront/productReducers';
+import { storefrontProductListReducer, storefrontProductDetailsReducer, storefrontSimilarProductsReducer } from './storefront/productReducers';
 import { cartReducer } from './user/cartReducers';
-import { orderListReducer, orderDetailsReducer, orderDeliverReducer } from './admin/orderReducers';
+import { orderListReducer, orderDetailsReducer, orderDeliverReducer, orderCreateManualReducer, orderPayManualReducer } from './admin/orderReducers';
 import { uploadImageReducer } from './admin/uploadReducers';
 import { reviewCreateReducer, reviewUpdateReducer, reviewVoteReducer, reviewReportReducer } from './storefront/reviewReducers';
 import { couponValidateReducer } from './user/couponReducers';
@@ -42,6 +45,8 @@ import {
   reportSalesCustomersReducer,
   reportPurchasesVendorsReducer
 } from './admin/reportReducers';
+import { userListReducer } from './admin/userReducers';
+import { publicFiltersReducer } from './storefront/filterReducers';
 
 const rootReducer = combineReducers({
   userAuth: userAuthReducer,
@@ -59,6 +64,8 @@ const rootReducer = combineReducers({
   masterDataList: masterDataListReducer,
   masterDataCreate: masterDataCreateReducer,
   masterDataUpdate: masterDataUpdateReducer,
+  masterDataTabs: masterDataTabsReducer,
+  masterDataTabCreate: masterDataTabCreateReducer,
   inventoryList: inventoryListReducer,
   inventoryUpdate: inventoryUpdateReducer,
   storefrontProductList: storefrontProductListReducer,
@@ -108,6 +115,12 @@ const rootReducer = combineReducers({
   reportPurchasesProducts: reportPurchasesProductsReducer,
   reportSalesCustomers: reportSalesCustomersReducer,
   reportPurchasesVendors: reportPurchasesVendorsReducer,
+  userList: userListReducer,
+  productListAdmin: productListAdminReducer,
+  orderCreateManual: orderCreateManualReducer,
+  orderPayManual: orderPayManualReducer,
+  publicFilters: publicFiltersReducer,
+  storefrontSimilarProducts: storefrontSimilarProductsReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

@@ -9,6 +9,14 @@ import {
     ORDER_DELIVER_SUCCESS,
     ORDER_DELIVER_FAIL,
     ORDER_DELIVER_RESET,
+    ORDER_CREATE_MANUAL_RESET,
+    ORDER_CREATE_MANUAL_FAIL,
+    ORDER_CREATE_MANUAL_SUCCESS,
+    ORDER_CREATE_MANUAL_REQUEST,
+    ORDER_PAY_MANUAL_REQUEST,
+    ORDER_PAY_MANUAL_SUCCESS,
+    ORDER_PAY_MANUAL_FAIL,
+    ORDER_PAY_MANUAL_RESET
 } from '../../constants/admin/orderConstants';
 
 export const orderListReducer = (state = { orders: [] }, action: any) => {
@@ -46,6 +54,31 @@ export const orderDeliverReducer = (state = {}, action: any) => {
         case ORDER_DELIVER_FAIL:
             return { loading: false, error: action.payload };
         case ORDER_DELIVER_RESET:
+            return {};
+        default:
+            return state;
+    }
+};
+
+export const orderCreateManualReducer = (state = {}, action: any) => {
+    switch (action.type) {
+        case ORDER_CREATE_MANUAL_REQUEST: return { loading: true };
+        case ORDER_CREATE_MANUAL_SUCCESS: return { loading: false, success: true, order: action.payload };
+        case ORDER_CREATE_MANUAL_FAIL: return { loading: false, error: action.payload };
+        case ORDER_CREATE_MANUAL_RESET: return {};
+        default: return state;
+    }
+};
+
+export const orderPayManualReducer = (state = {}, action: any) => {
+    switch (action.type) {
+        case ORDER_PAY_MANUAL_REQUEST:
+            return { loading: true };
+        case ORDER_PAY_MANUAL_SUCCESS:
+            return { loading: false, success: true };
+        case ORDER_PAY_MANUAL_FAIL:
+            return { loading: false, error: action.payload };
+        case ORDER_PAY_MANUAL_RESET:
             return {};
         default:
             return state;

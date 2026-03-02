@@ -40,7 +40,13 @@ const AdminOrdersPage: React.FC = () => {
       <div className={styles.container}>
         
         <header className={styles.header}>
-          <h1 className={styles['page-title']}>Manage Orders</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <h1 className={styles['page-title']}>Manage Orders</h1>
+            {/* --- UPDATED BUTTON TO NAVIGATE TO NEW PAGE --- */}
+            <Link to="/admin/order/create" className={`${styles.btn} ${styles['btn-primary']}`} style={{ textDecoration: 'none' }}>
+              + Create Manual Order
+            </Link>
+          </div>
           
           <div className={styles['filter-bar']}>
             <div className={styles['filter-icon']}>
@@ -87,27 +93,30 @@ const AdminOrdersPage: React.FC = () => {
                     <th>Order ID</th>
                     <th>Cus Name</th>
                     <th>Cus Email</th>
-                    <th>Cus Mobile No.</th>
                     <th>Date</th>
                     <th className={styles['align-right']}>Total</th>
-                    <th className={styles['align-right']}>Earnings</th> {/* NEW COLUMN */}
-                    <th className={styles['align-center']}>Paid</th>
+                    <th className={styles['align-right']}>Earnings</th>
+                    <th className={styles['align-center']}>Payment Status</th> {/* UPDATED HEADER */}
                     <th className={styles['align-center']}>Delivered</th>
                     <th className={styles['align-right']}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredOrders.map((order: any) => {
-                    // Calculate Earnings safely
-                    // (Old orders without totalCost will result in 0 instead of NaN)
                     const totalCost = order.totalCost || order.totalPrice; 
                     const earnings = order.totalPrice - totalCost;
 
                     return (
                     <tr key={order._id}>
-                      <td className={styles['text-code']}>{formatOrderId(order._id)}</td>
+                      <td className={styles['text-code']}>
+                        {formatOrderId(order._id)}
+                        {order.isManualEntry && (
+                          <span style={{ marginLeft: '8px', fontSize: '10px', background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                            MANUAL
+                          </span>
+                        )}
+                      </td>
                       
-                      {/* --- NEW: Stacked Customer Data --- */}
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <span className={styles['text-user']} style={{ fontWeight: '600' }}>
@@ -118,14 +127,7 @@ const AdminOrdersPage: React.FC = () => {
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <span className={styles['text-user']} style={{ fontWeight: '600' }}>
-                            {order.user?.email || 'Deleted User'}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span className={styles['text-user']} style={{ fontWeight: '600' }}>
-                            {order.user?.mobile || 'Deleted User'}
+                            {order.user?.email || 'N/A'}
                           </span>
                         </div>
                       </td>
@@ -133,18 +135,25 @@ const AdminOrdersPage: React.FC = () => {
                       <td>{new Date(order.createdAt).toLocaleDateString()}</td>
                       <td className={`${styles['text-price']} ${styles['align-right']}`}>₹{order.totalPrice.toFixed(2)}</td>
                       
-                      {/* --- NEW: Earnings Display --- */}
                       <td className={`${styles['text-price']} ${styles['align-right']}`} style={{ color: 'var(--color-success-600)' }}>
                         ₹{earnings > 0 ? earnings.toFixed(2) : '0.00'}
                       </td>
 
+                      {/* --- UPDATED PAYMENT STATUS COLUMN --- */}
                       <td className={styles['align-center']}>
                         {order.isPaid ? (
-                          <span className={`${styles.badge} ${styles['badge--success']}`}>Paid</span>
+                          <span className={`${styles.badge} ${styles['badge--success']}`}>
+                            {order.paymentMethod === 'Stripe' ? 'Stripe (Immediate)' : 'Paid (Cash)'}
+                          </span>
                         ) : (
-                          <span className={`${styles.badge} ${styles['badge--error']}`}>No</span>
+                          <span className={`${styles.badge} ${styles['badge--warning']}`}>
+                            {order.paymentMethod === 'Cash' && order.paymentTerms > 0 
+                              ? `Pending (Net ${order.paymentTerms} Days)` 
+                              : 'Pending'}
+                          </span>
                         )}
                       </td>
+
                       <td className={styles['align-center']}>
                         {order.isDelivered ? (
                           <span className={`${styles.badge} ${styles['badge--success']}`}>Yes</span>
@@ -161,7 +170,7 @@ const AdminOrdersPage: React.FC = () => {
                   )})}
                   {filteredOrders.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-8)' }} className="text-muted">
+                      <td colSpan={9} style={{ textAlign: 'center', padding: 'var(--space-8)' }} className="text-muted">
                         No orders found for this time range.
                       </td>
                     </tr>

@@ -63,6 +63,13 @@ const OrderDetailsPage: React.FC = () => {
     </div>
   );
 
+  // --- NEW: Calculate the discount dynamically ---
+  // If (Subtotal + Shipping) > Total, the difference is the discount!
+  const rawExpectedTotal = (order.itemsPrice || 0) + (order.shippingPrice || 0);
+  const calculatedDiscount = rawExpectedTotal - (order.totalPrice || 0);
+  // Use > 0.01 to avoid floating point math errors (like 0.000000001)
+  const hasDiscount = calculatedDiscount > 0.01; 
+
   return (
     <main className={styles['order-page']}>
       <div className={styles['order-page__container']}>
@@ -154,6 +161,13 @@ const OrderDetailsPage: React.FC = () => {
                       <span className={styles['info-value']}>{new Date(order.paidAt || order.createdAt).toLocaleDateString()}</span>
                     </div>
                   )}
+                  {/* Provide visibility into the Net 30/60 manual payment terms for the customer */}
+                  {!order.isPaid && order.paymentTermsPreview && (
+                    <div className={`${styles['info-group']} ${styles['info-group--full']}`}>
+                      <span className={styles['info-label']} style={{ color: '#92400e' }}>Payment Terms</span>
+                      <span className={styles['info-value']} style={{ fontWeight: 'bold' }}>{order.paymentTermsPreview}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -204,6 +218,15 @@ const OrderDetailsPage: React.FC = () => {
                   <span className={styles['summary-label']}>Items Subtotal</span>
                   <span className={styles['summary-value']}>₹{order.itemsPrice?.toFixed(2)}</span>
                 </div>
+                
+                {/* --- NEW: Discount Row --- */}
+                {hasDiscount && (
+                  <div className={styles['summary-row']} style={{ color: 'var(--color-success-600)', fontWeight: '600' }}>
+                    <span className={styles['summary-label']}>Discount Applied</span>
+                    <span className={styles['summary-value']}>- ₹{calculatedDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+
                 <div className={styles['summary-row']}>
                   <span className={styles['summary-label']}>Shipping</span>
                   <span className={styles['summary-value']}>
@@ -220,6 +243,12 @@ const OrderDetailsPage: React.FC = () => {
                     <span>₹{order.totalPrice?.toFixed(2)}</span>
                   </span>
                 </div>
+                {/* Check if the backend left a note about the 2% early payment discount */}
+                {order.paymentResult?.status && order.paymentResult.status.includes('Discount Applied') && (
+                    <div style={{ fontSize: '11px', color: 'var(--color-success-600)', marginTop: '8px', textAlign: 'right' }}>
+                        {order.paymentResult.status.match(/\((.*?)\)/)?.[1] || 'Early Payment Discount Applied'}
+                    </div>
+                )}
               </div>
             </div>
 

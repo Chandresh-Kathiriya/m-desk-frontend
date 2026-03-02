@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { removeFromCart, fetchUserCart, updateCartQty } from '../../../store/actions/user/cartActions';
@@ -17,25 +17,37 @@ const CartPage: React.FC = () => {
   const userAuth = useSelector((state: RootState) => state.userAuth || {});
   const { userInfo } = userAuth as any;
 
+  // --- NEW: Local State for Item-Level Spinners ---
+  const [processingSku, setProcessingSku] = useState<string | null>(null);
+
   useEffect(() => {
     if (userInfo && userInfo.token) {
       dispatch(fetchUserCart());
     }
   }, [dispatch, userInfo]);
 
-  const removeFromCartHandler = (sku: string) => {
+  // --- NEW: Clear processing state whenever cart finishes loading/updating ---
+  useEffect(() => {
+    if (!loading) {
+      setProcessingSku(null);
+    }
+  }, [loading, cartItems]);
+
+  const removeFromCartHandler = async (sku: string) => {
     if (window.confirm('Remove this item from your cart?')) {
-      dispatch(removeFromCart(sku));
+      setProcessingSku(sku); // Start Spinner
+      await dispatch(removeFromCart(sku));
     }
   };
 
-  const handleQtyChange = (item: any, newQty: number) => {
+  const handleQtyChange = async (item: any, newQty: number) => {
     if (newQty < 1) {
       removeFromCartHandler(item.sku);
     } else if (newQty > item.maxStock) {
       alert(`Sorry, we only have ${item.maxStock} of these left in stock!`);
     } else {
-      dispatch(updateCartQty(item.sku, newQty));
+      setProcessingSku(item.sku); // Start Spinner
+      await dispatch(updateCartQty(item.sku, newQty));
     }
   };
 
@@ -67,7 +79,6 @@ const CartPage: React.FC = () => {
 
   return (
     <main className={styles['cart-page']}>
-      {/* Assuming 'container' is handled globally. If not, use styles.container */}
       <div className="container">
         <header className={styles['cart-page__header']}>
           <h1 className={styles['cart-page__title']}>Shopping Cart</h1>
@@ -76,7 +87,8 @@ const CartPage: React.FC = () => {
           )}
         </header>
 
-        {loading ? (
+        {/* Only show the full-page spinner on the INITIAL load, not on item updates */}
+        {loading && cartItems.length === 0 ? (
           <div className={styles['state-container']}>
             <div className={styles.spinner} aria-label="Loading cart..."></div>
           </div>
@@ -100,74 +112,91 @@ const CartPage: React.FC = () => {
 
             {/* LEFT COLUMN: Cart Items List */}
             <section className={styles['cart-items']}>
-              {cartItems.map((item: any) => (
-                <article key={item.sku} className={styles['cart-item']}>
+              {cartItems.map((item: any) => {
+                
+                // Check if this specific item is currently being updated
+                const isProcessing = processingSku === item.sku;
 
-                  <div className={styles['cart-item__image-wrapper']}>
-                    <img
-                      src={item.image || 'https://via.placeholder.com/150'}
-                      alt={item.name}
-                      className={styles['cart-item__image']}
-                    />
-                  </div>
+                return (
+                  <article key={item.sku} className={styles['cart-item']} style={{ opacity: isProcessing ? 0.6 : 1, transition: 'opacity 0.2s' }}>
 
-                  <div className={styles['cart-item__details']}>
-                    <div className={styles['cart-item__header']}>
-                      <Link to={`/product/${item.product}`} className={styles['cart-item__title-link']}>
-                        <h3 className={styles['cart-item__title']}>{item.name}</h3>
-                      </Link>
-                      <button
-                        className={styles['cart-item__remove']}
-                        onClick={() => removeFromCartHandler(item.sku)}
-                        aria-label="Remove item"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <div className={styles['cart-item__image-wrapper']}>
+                      <img
+                        src={item.image || 'https://via.placeholder.com/150'}
+                        alt={item.name}
+                        className={styles['cart-item__image']}
+                      />
+                    </div>
+
+                    <div className={styles['cart-item__details']}>
+                      <div className={styles['cart-item__header']}>
+                        <Link to={`/product/${item.product}`} className={styles['cart-item__title-link']}>
+                          <h3 className={styles['cart-item__title']}>{item.name}</h3>
+                        </Link>
+                        <button
+                          className={styles['cart-item__remove']}
+                          onClick={() => removeFromCartHandler(item.sku)}
+                          aria-label="Remove item"
+                          disabled={isProcessing}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div className={styles['cart-item__variants']}>
+                        <span className={styles['cart-item__variant-label']}>Color: <strong className={styles['cart-item__variant-value']}>{item.color}</strong></span>
+                        <span className={styles['cart-item__variant-divider']}>|</span>
+                        <span className={styles['cart-item__variant-label']}>Size: <strong className={styles['cart-item__variant-value']}>{item.size}</strong></span>
+                      </div>
+
+                      <div className={styles['cart-item__delivery']}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                          <rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle>
                         </svg>
-                      </button>
-                    </div>
-
-                    <div className={styles['cart-item__variants']}>
-                      <span className={styles['cart-item__variant-label']}>Color: <strong className={styles['cart-item__variant-value']}>{item.color}</strong></span>
-                      <span className={styles['cart-item__variant-divider']}>|</span>
-                      <span className={styles['cart-item__variant-label']}>Size: <strong className={styles['cart-item__variant-value']}>{item.size}</strong></span>
-                    </div>
-
-                    <div className={styles['cart-item__delivery']}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
-                        <rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle>
-                      </svg>
-                      Est. Delivery: {getEstimatedDelivery()}
-                    </div>
-
-                    <div className={styles['cart-item__actions']}>
-                      <div className={styles['qty-control']}>
-                        <button
-                          className={styles['qty-control__btn']}
-                          onClick={() => handleQtyChange(item, item.qty - 1)}
-                          aria-label="Decrease quantity"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        </button>
-                        <span className={styles['qty-control__value']}>{item.qty}</span>
-                        <button
-                          className={styles['qty-control__btn']}
-                          onClick={() => handleQtyChange(item, item.qty + 1)}
-                          disabled={item.qty >= item.maxStock}
-                          aria-label="Increase quantity"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        </button>
+                        Est. Delivery: {getEstimatedDelivery()}
                       </div>
 
-                      <div className={styles['cart-item__price']}>
-                        ₹{item.price.toFixed(2)}
+                      <div className={styles['cart-item__actions']}>
+                        <div className={styles['qty-control']}>
+                          <button
+                            className={styles['qty-control__btn']}
+                            onClick={() => handleQtyChange(item, item.qty - 1)}
+                            aria-label="Decrease quantity"
+                            disabled={isProcessing}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                          </button>
+                          
+                          {/* --- SHOW SPINNER INSTEAD OF QTY NUMBER IF PROCESSING --- */}
+                          <span className={styles['qty-control__value']} style={{ width: '20px', display: 'flex', justifyContent: 'center' }}>
+                            {isProcessing ? (
+                               <div className={styles.spinner} style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div>
+                            ) : (
+                              item.qty
+                            )}
+                          </span>
+
+                          <button
+                            className={styles['qty-control__btn']}
+                            onClick={() => handleQtyChange(item, item.qty + 1)}
+                            disabled={item.qty >= item.maxStock || isProcessing}
+                            aria-label="Increase quantity"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                          </button>
+                        </div>
+
+                        <div className={styles['cart-item__price']}>
+                          ₹{item.price.toFixed(2)}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </section>
 
             {/* RIGHT COLUMN: Order Summary */}
@@ -218,11 +247,10 @@ const CartPage: React.FC = () => {
                   <span className={styles['summary-card__total-value']}>₹{orderTotal.toFixed(2)}</span>
                 </div>
 
-                {/* Combines local summary button class with module button base classes */}
                 <button
                   className={`btn btn--primary btn--full ${styles['summary-card__btn']}`}
                   onClick={checkoutHandler}
-                  disabled={cartItems.length === 0}
+                  disabled={cartItems.length === 0 || processingSku !== null}
                 >
                   Proceed to Checkout
                 </button>

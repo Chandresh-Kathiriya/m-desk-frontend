@@ -261,7 +261,7 @@ const AdminCouponsPage: React.FC = () => {
                                         </select>
                                     </div>
                                     <div className={styles['form-group']}>
-                                        <label className={styles.label}>Restrict to Contact</label>
+                                        <label className={styles.label}>Allowed Customers</label>
                                         <select className={styles.select} value={selectedContact} onChange={(e) => setSelectedContact(e.target.value)}>
                                             <option value="">Any Customer</option>
                                             {contacts.map((c: any) => <option key={c._id} value={c._id}>{c.name} ({c.email})</option>)}

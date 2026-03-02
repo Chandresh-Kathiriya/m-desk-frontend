@@ -27,6 +27,8 @@ export const textSchema = {
         invoices: 'Invoices',
         bills: 'Bills',
         reports: 'Reports',
+        purchases: 'Purchases',
+        contacts: 'Contacts',
         settings: 'Settings',
         masterData: 'Master Data',
         coupons: "Coupons",

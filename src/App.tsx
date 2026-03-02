@@ -38,6 +38,7 @@ import AdminPurchaseOrdersPage from './modules/admin/pages/AdminPurchaseOrdersPa
 import AdminVendorBillDetailsPage from './modules/admin/pages/AdminVendorBillDetailsPage.tsx';
 import AdminVendorBillsPage from './modules/admin/pages/AdminVendorBillsPage.tsx';
 import AdminReportsPage from './modules/admin/pages/AdminReportsPage.tsx';
+import AdminOrderCreatePage from './modules/admin/pages/AdminOrderCreatePage.tsx';
 
 function App() {
   return (
@@ -70,6 +71,7 @@ function App() {
           <Route path="/admin/master-data" element={<MasterDataManagement />} />
           <Route path="/admin/inventory" element={<InventoryManagement />} />
           <Route path="/admin/orders" element={<OrdersPage />} />
+          <Route path="/admin/order/create" element={<AdminOrderCreatePage />} />
           <Route path="/admin/order/:id" element={<AdminOrderDetailsPage />} />
           <Route path="/admin/coupons" element={<AdminCouponsPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />

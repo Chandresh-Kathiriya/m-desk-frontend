@@ -7,7 +7,6 @@ import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '../../../common/components/CheckoutForm';
 import { saveShippingAddress } from '../../../store/actions/user/cartActions';
 import { validateCoupon } from '../../../store/actions/user/couponActions';
-// --- NEW IMPORTS ---
 import { createStripeIntent } from '../../../store/actions/user/orderActions';
 import { STRIPE_INTENT_RESET } from '../../../store/constants/user/orderConstants';
 import { RootState } from '../../../store/reducers';
@@ -27,7 +26,6 @@ const CheckoutPage: React.FC = () => {
     const userAuth = useSelector((state: RootState) => state.userAuth || {});
     const { userInfo } = userAuth as any;
 
-    // --- NEW: Grab Stripe Intent from Redux ---
     const stripeIntent = useSelector((state: RootState) => state.stripeIntent || {} as any);
     const { loading: intentLoading, success: intentSuccess, clientSecret, error: intentError } = stripeIntent;
 
@@ -45,16 +43,20 @@ const CheckoutPage: React.FC = () => {
     const [discountAmount, setDiscountAmount] = useState<number>(0);
     const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // This holds the exact details of the cart so we can send it to the DB *after* payment
     const [pendingOrderData, setPendingOrderData] = useState<any>(null);
 
+    // --- FIX: Reset coupon when cart is empty (e.g., after successful order) ---
     useEffect(() => {
         if (cartItems.length === 0) {
+            setCouponCode('');
+            setDiscountAmount(0);
+            setAppliedCoupon(null);
+            setCouponMessage(null);
+            dispatch({ type: 'COUPON_VALIDATE_RESET' }); // Wipe coupon from Redux!
             navigate('/cart');
         }
-    }, [cartItems, navigate]);
+    }, [cartItems, navigate, dispatch]);
 
-    // Listen for Intent Errors
     useEffect(() => {
         if (intentError) {
             alert(`Payment Gateway Error: ${intentError}`);
@@ -95,15 +97,14 @@ const CheckoutPage: React.FC = () => {
         setDiscountAmount(0);
         setAppliedCoupon(null);
         setCouponMessage(null);
+        dispatch({ type: 'COUPON_VALIDATE_RESET' }); // Wipe coupon from Redux!
     };
 
-    // --- NEW: Handle Proceed to Payment (No order created!) ---
     const confirmShippingHandler = (e: React.FormEvent) => {
         e.preventDefault();
         const updatedAddress = { address, city, postalCode, country };
         dispatch(saveShippingAddress(updatedAddress));
 
-        // Package up what the order WILL look like
         const orderData = {
             orderItems: cartItems,
             shippingAddress: updatedAddress,
@@ -111,15 +112,14 @@ const CheckoutPage: React.FC = () => {
             itemsPrice: subtotal,
             shippingPrice,
             totalPrice,
+            discountAmount, // Good practice to save this to the DB too!
+            couponCode: appliedCoupon?.code || null
         };
 
-        setPendingOrderData(orderData); // Save locally for the Checkout Form
-
-        // Dispatch to Redux to safely get the Stripe Secret
+        setPendingOrderData(orderData);
         dispatch(createStripeIntent(totalPrice));
     };
 
-    // Allow user to go back and edit shipping
     const handleEditShipping = () => {
         dispatch({ type: STRIPE_INTENT_RESET });
         setPendingOrderData(null);
@@ -160,7 +160,6 @@ const CheckoutPage: React.FC = () => {
                                 <p className={styles['checkout-step__subtitle']}>All transactions are secure and encrypted.</p>
 
                                 <div className={styles['checkout-stripe-container']}>
-                                    {/* Pass the pending order down to the form component! */}
                                     <Elements stripe={stripePromise} options={{ clientSecret }}>
                                         <CheckoutForm pendingOrderData={pendingOrderData} />
                                     </Elements>
@@ -203,7 +202,6 @@ const CheckoutPage: React.FC = () => {
                         )}
                     </section>
 
-                    {/* RIGHT COLUMN: Sidebar Summary (Kept unchanged for brevity) */}
                     <aside className={styles['checkout-sidebar']}>
                         <div className={styles['checkout-sidebar__inner']}>
                             <div className={styles['checkout-sidebar__items']}>

@@ -9,7 +9,7 @@ import { RootState } from '../../store/reducers';
 import styles from '../../schemas/css/CheckoutForm.module.css';
 
 interface CheckoutFormProps {
-    pendingOrderData: any; // Accept the prepared order data from the parent
+    pendingOrderData: any; 
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ pendingOrderData }) => {
@@ -27,12 +27,30 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ pendingOrderData }) => {
 
     // Watch for successful order creation to redirect
     useEffect(() => {
+        console.log("🛠️ [CheckoutForm] Order State Changed:", { successOrder, errorOrder });
+
         if (successOrder) {
+            console.log("✅ [CheckoutForm] Order successful! Initiating cleanup...");
+            
+            // 1. Reset Order State
             dispatch({ type: ORDER_CREATE_RESET });
-            dispatch({ type: STRIPE_INTENT_RESET }); // Clean up the intent state too
+            
+            // 2. Reset Stripe State
+            dispatch({ type: STRIPE_INTENT_RESET }); 
+            
+            // 3. WIPE THE COUPON STATE!
+            console.log("🧹 [CheckoutForm] Wiping Coupon from Redux...");
+            dispatch({ type: 'COUPON_VALIDATE_RESET' }); 
+
+            // 4. (Optional but recommended) If your cart items aren't clearing properly, dispatch this too:
+            // dispatch({ type: 'CART_CLEAR_ITEMS' });
+
+            console.log("🚀 [CheckoutForm] Navigating to /order-success...");
             navigate('/order-success');
         }
+        
         if (errorOrder) {
+            console.error("❌ [CheckoutForm] Order Creation Failed:", errorOrder);
             setMessage(errorOrder);
         }
     }, [successOrder, errorOrder, navigate, dispatch]);
@@ -41,13 +59,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ pendingOrderData }) => {
         e.preventDefault();
 
         if (!stripe || !elements || !pendingOrderData) {
+            console.warn("⚠️ [CheckoutForm] Missing stripe, elements, or pendingOrderData");
             return;
         }
 
         setIsProcessingStripe(true);
         setMessage(null);
+        console.log("⏳ [CheckoutForm] Processing Stripe Payment...");
 
-        // 1. Process with Stripe. 'redirect: if_required' stops the automatic redirect!
         const { error, paymentIntent } = await stripe.confirmPayment({
             elements,
             confirmParams: {
@@ -57,12 +76,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ pendingOrderData }) => {
         });
 
         if (error) {
-            // Card declined, insufficient funds, etc.
+            console.error("❌ [CheckoutForm] Stripe Error:", error.message);
             setMessage(error.message || 'An unexpected error occurred.');
             setIsProcessingStripe(false);
         } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+            console.log("✅ [CheckoutForm] Stripe Payment Succeeded!", paymentIntent.id);
             
-            // 2. STRIPE SUCCESS! Combine the receipt with the order data
             const finalOrderData = {
                 ...pendingOrderData,
                 paymentResult: {
@@ -72,7 +91,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ pendingOrderData }) => {
                 }
             };
 
-            // 3. Dispatch the Redux action to finally create the order and deduct stock in the DB!
+            console.log("📦 [CheckoutForm] Dispatching createOrder to Backend...", finalOrderData);
             dispatch(createOrder(finalOrderData));
             setIsProcessingStripe(false);
         }

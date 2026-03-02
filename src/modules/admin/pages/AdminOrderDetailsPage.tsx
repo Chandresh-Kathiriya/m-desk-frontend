@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../../store/reducers';
-import { getOrderDetails, deliverOrder } from '../../../store/actions/admin/orderActions';
+import { getOrderDetails, deliverOrder, payOrderManual } from '../../../store/actions/admin/orderActions';
 import { getAdminInvoiceByOrderId } from '../../../store/actions/admin/invoiceActions';
-import { ORDER_DELIVER_RESET } from '../../../store/constants/admin/orderConstants';
+import { ORDER_DELIVER_RESET, ORDER_PAY_MANUAL_RESET } from '../../../store/constants/admin/orderConstants';
 import { ADMIN_INVOICE_BY_ORDER_RESET } from '../../../store/constants/admin/invoiceConstants';
 
 import styles from '../../../schemas/css/AdminOrderDetailsPage.module.css';
@@ -13,6 +13,7 @@ const AdminOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const dispatch = useDispatch<any>();
 
+    // --- REDUX STATES ---
     const adminAuth = useSelector((state: RootState) => state.adminAuth || state.userAuth);
     const userInfo = (adminAuth as any).adminInfo || (adminAuth as any).userInfo;
 
@@ -24,6 +25,12 @@ const AdminOrderDetailsPage: React.FC = () => {
 
     const adminInvoiceByOrder = useSelector((state: RootState) => state.adminInvoiceByOrder || {});
     const { invoice } = adminInvoiceByOrder as any;
+
+    const orderPayManual = useSelector((state: RootState) => state.orderPayManual || {});
+    const { loading: isPaying, success: successPayManual, error: errorPayManual } = orderPayManual as any;
+
+    // Local State for Manual Payment Date
+    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Fetch Order Data
     useEffect(() => {
@@ -40,12 +47,27 @@ const AdminOrderDetailsPage: React.FC = () => {
         if (id && userInfo) {
             dispatch(getAdminInvoiceByOrderId(id));
         }
-
-        // Cleanup: Reset the invoice state when leaving the page or changing orders
         return () => {
             dispatch({ type: ADMIN_INVOICE_BY_ORDER_RESET });
         };
     }, [dispatch, id, userInfo]);
+
+    // Handle Manual Payment Success/Error
+    useEffect(() => {
+        if (successPayManual) {
+            alert("Payment recorded successfully!");
+            dispatch({ type: ORDER_PAY_MANUAL_RESET });
+            // Refresh the order to see the new total and paid status
+            if (id) {
+                dispatch(getOrderDetails(id));
+                dispatch(getAdminInvoiceByOrderId(id)); // Refresh invoice too
+            }
+        }
+        if (errorPayManual) {
+            alert(errorPayManual);
+            dispatch({ type: ORDER_PAY_MANUAL_RESET });
+        }
+    }, [successPayManual, errorPayManual, dispatch, id]);
 
     const deliverHandler = () => {
         if (order) {
@@ -53,25 +75,18 @@ const AdminOrderDetailsPage: React.FC = () => {
         }
     };
 
+    const handleMarkAsPaid = () => {
+        if (!paymentDate) return alert("Please select a payment date.");
+        if (id) {
+            dispatch(payOrderManual(id, paymentDate));
+        }
+    };
+
     const formatOrderId = (orderId: string) => `ORD-${orderId.slice(-6).toUpperCase()}`;
 
-    if (loading) return (
-        <div className={styles['spinner-container']}>
-            <div className={`${styles.spinner} ${styles['spinner--large']}`}></div>
-        </div>
-    );
-    
-    if (error) return (
-        <div className={styles.container} style={{ padding: 'var(--space-8) 0' }}>
-            <div className={`${styles.alert} ${styles['alert--error']}`}>{error}</div>
-        </div>
-    );
-    
-    if (!order) return (
-        <div className={styles.container} style={{ padding: 'var(--space-8) 0' }}>
-            <h4 style={{ color: 'var(--color-neutral-600)' }}>Order not found.</h4>
-        </div>
-    );
+    if (loading) return <div className={styles['spinner-container']}><div className={`${styles.spinner} ${styles['spinner--large']}`}></div></div>;
+    if (error) return <div className={styles.container} style={{ padding: 'var(--space-8) 0' }}><div className={`${styles.alert} ${styles['alert--error']}`}>{error}</div></div>;
+    if (!order) return <div className={styles.container} style={{ padding: 'var(--space-8) 0' }}><h4 style={{ color: 'var(--color-neutral-600)' }}>Order not found.</h4></div>;
 
     return (
         <main className={styles['page-wrapper']}>
@@ -192,22 +207,54 @@ const AdminOrderDetailsPage: React.FC = () => {
                                     <span className={styles['summary-total-value']}>₹{order.totalPrice.toFixed(2)}</span>
                                 </div>
 
+                                {order.paymentResult?.status && order.paymentResult.status.includes('Discount Applied') && (
+                                    <div style={{ fontSize: '12px', color: 'var(--color-success-600)', marginTop: '8px', fontWeight: 'bold' }}>
+                                        {order.paymentResult.status}
+                                    </div>
+                                )}
+
+                                {/* Payment Collection Box (Only shows if Unpaid) */}
+                                {!order.isPaid && (
+                                    <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <h4 style={{ fontSize: '14px', marginBottom: '12px', color: '#1e293b', fontWeight: '600' }}>Record Customer Payment</h4>
+                                        
+                                        <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Date Payment Received:</label>
+                                        <input 
+                                            type="date" 
+                                            value={paymentDate} 
+                                            onChange={e => setPaymentDate(e.target.value)} 
+                                            style={{ width: '100%', padding: '10px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                                            max={new Date().toISOString().split('T')[0]} // Cannot pick future dates
+                                        />
+                                        
+                                        {order.manualPaymentDays > 0 && (
+                                            <div style={{ fontSize: '12px', color: '#059669', marginBottom: '12px', background: '#ecfdf5', padding: '8px', borderRadius: '4px' }}>
+                                                <strong style={{display:'block'}}>Opportunity: 2% Early Discount</strong>
+                                                If paid within {order.manualPaymentDays} days of invoice creation, a 2% discount will be auto-calculated.
+                                            </div>
+                                        )}
+
+                                        <button 
+                                            onClick={handleMarkAsPaid} 
+                                            disabled={isPaying} 
+                                            className={`${styles.btn} ${styles['btn-success']}`} 
+                                            style={{ width: '100%', justifyContent: 'center' }}
+                                        >
+                                            {isPaying ? 'Processing...' : 'Mark as Paid'}
+                                        </button>
+                                    </div>
+                                )}
+
                                 {/* Official Admin Invoice Button */}
                                 {invoice?._id && (
                                     <div style={{ margin: 'var(--space-4) 0' }}>
                                         <Link 
                                             to={`/admin/invoice/${invoice._id}`} 
                                             style={{
-                                                display: 'block',
-                                                width: '100%',
-                                                padding: '12px',
-                                                backgroundColor: 'var(--color-neutral-900)',
-                                                color: 'white',
-                                                textAlign: 'center',
-                                                borderRadius: 'var(--radius-md)',
-                                                fontWeight: 'bold',
-                                                textDecoration: 'none',
-                                                boxShadow: 'var(--shadow-sm)'
+                                                display: 'block', width: '100%', padding: '12px',
+                                                backgroundColor: 'var(--color-neutral-900)', color: 'white',
+                                                textAlign: 'center', borderRadius: 'var(--radius-md)',
+                                                fontWeight: 'bold', textDecoration: 'none', boxShadow: 'var(--shadow-sm)'
                                             }}
                                         >
                                             View ERP Invoice
@@ -227,6 +274,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                                             className={`${styles.btn} ${styles['btn-primary']}`}
                                             onClick={deliverHandler}
                                             disabled={loadingDeliver}
+                                            style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
                                         >
                                             {loadingDeliver ? (
                                                 <><div className={`${styles.spinner} ${styles['spinner--light']}`}></div> Processing...</>

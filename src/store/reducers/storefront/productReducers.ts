@@ -2,6 +2,10 @@ import {
   STOREFRONT_PRODUCT_LIST_REQUEST,
   STOREFRONT_PRODUCT_LIST_SUCCESS,
   STOREFRONT_PRODUCT_LIST_FAIL,
+  STOREFRONT_SIMILAR_PRODUCTS_FAIL,
+  STOREFRONT_SIMILAR_PRODUCTS_SUCCESS,
+  STOREFRONT_SIMILAR_PRODUCTS_REQUEST,
+  STOREFRONT_SIMILAR_PRODUCTS_RESET,
 } from '../../constants/storefront/productConstants';
 
 export const storefrontProductListReducer = (state = { products: [] }, action: any) => {
@@ -36,5 +40,20 @@ export const storefrontProductDetailsReducer = (state = { product: { variants: [
       return { product: {} }; // Resets the state back to empty
     default:
       return state;
+  }
+};
+
+export const storefrontSimilarProductsReducer = (state = { products: [] }, action: any) => {
+  switch (action.type) {
+      case STOREFRONT_SIMILAR_PRODUCTS_REQUEST:
+          return { loading: true, products: [] };
+      case STOREFRONT_SIMILAR_PRODUCTS_SUCCESS:
+          return { loading: false, products: action.payload };
+      case STOREFRONT_SIMILAR_PRODUCTS_FAIL:
+          return { loading: false, error: action.payload };
+      case STOREFRONT_SIMILAR_PRODUCTS_RESET:
+          return { products: [] };
+      default:
+          return state;
   }
 };
