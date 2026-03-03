@@ -4,7 +4,7 @@ import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { getStorefrontProductDetails, listSimilarProducts } from '../../../store/actions/storefront/productActions';
 import { addToCart } from '../../../store/actions/user/cartActions';
 import { listMyOrders } from '../../../store/actions/user/orderActions';
-import { createReview, updateReview, voteReview, reportReview } from '../../../store/actions/storefront/reviewActions';
+import { createReview, updateReview } from '../../../store/actions/storefront/reviewActions';
 import { REVIEW_CREATE_RESET, REVIEW_UPDATE_RESET, REVIEW_VOTE_RESET, REVIEW_REPORT_RESET } from '../../../store/constants/storefront/reviewConstants';
 import { STOREFRONT_SIMILAR_PRODUCTS_RESET } from '../../../store/constants/storefront/productConstants';
 import { RootState } from '../../../store/reducers';
@@ -294,26 +294,16 @@ const ProductDetailsPage: React.FC = () => {
     else dispatch(createReview(product._id, { rating, comment }));
   };
 
-  const handleVote = (reviewId: string, voteType: 'helpful' | 'unhelpful') => {
-    if (!userInfo) return alert("Please log in to vote.");
-    dispatch(voteReview(product._id, reviewId, voteType));
-  };
-
-  const handleReport = (reviewId: string) => {
-    if (!userInfo) return alert("Please log in to report.");
-    if (window.confirm("Are you sure you want to report this review for abuse?")) {
-      dispatch(reportReview(product._id, reviewId));
-    }
-  };
-
-  const handleEditClick = (review: any) => {
-    setEditingReviewId(review._id);
-    setRating(review.rating);
-    setComment(review.comment);
-    document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const sortedReviews = product?.reviews ? [...product.reviews].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : [];
+
+  const userId = userInfo?.user?._id || userInfo?.user?.id || userInfo?._id || userInfo?.id;
+  
+  // Check if this specific user ID exists in the reviews array
+  const userExistingReview = userId ? sortedReviews.find((r: any) => 
+      r.user === userId || (r.user && r.user._id === userId) || (r.user && r.user.id === userId)
+  ) : null;
+  
+  const hasReviewed = !!userExistingReview;
 
   return (
     <main className={styles['product-page']}>
@@ -462,34 +452,36 @@ const ProductDetailsPage: React.FC = () => {
                   return (
                     <li key={review._id} className={styles['review-card']}>
                       <div className={styles['review-card__header']}>
-                        <div className={styles['review-card__author']}>
-                          <strong className={styles['review-card__name']}>{review.name}</strong>
-                          {review.isVerifiedPurchase && (
-                            <span className={styles['verified-badge']}>
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                              Verified Buyer
-                            </span>
-                          )}
+                        
+                        {/* UPGRADED AUTHOR INFO WITH AVATAR */}
+                        <div className={styles['review-card__author-group']}>
+                          <div className={styles['review-card__avatar']}>
+                            {review.name ? review.name.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div className={styles['review-card__author-info']}>
+                            <div className={styles['review-card__name-row']}>
+                              <strong className={styles['review-card__name']}>{review.name}</strong>
+                              {review.isVerifiedPurchase && (
+                                <span className={styles['verified-badge']}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                            <div className={styles['review-card__rating']}><Rating value={review.rating} /></div>
+                          </div>
                         </div>
+
                         <div className={styles['review-card__meta']}>
-                          <span className={styles['review-card__date']}>{new Date(review.createdAt).toLocaleDateString()}</span>
+                          <span className={styles['review-card__date']}>
+                            {new Date(review.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                          </span>
                           {review.isEdited && <span className={styles['review-card__edited']}>(Edited)</span>}
                         </div>
                       </div>
 
-                      <div className={styles['review-card__rating']}><Rating value={review.rating} /></div>
                       <p className={styles['review-card__comment']}>{review.comment}</p>
 
-                      <div className={styles['review-card__actions']}>
-                        <button className={`${styles['review-btn']} ${styles['review-btn--vote']}`} onClick={() => handleVote(review._id, 'helpful')} disabled={isOwner || loadingVoteId === review._id}>
-                          Helpful ({review.helpfulVotes || 0})
-                        </button>
-                        <span className={styles['review-card__actions-divider']}>·</span>
-                        <button className={`${styles['review-btn']} ${styles['review-btn--text']}`} onClick={() => handleReport(review._id)} disabled={isOwner || loadingReportId === review._id}>Report</button>
-                        {isOwner && (
-                          <button className={`${styles['review-btn']} ${styles['review-btn--text']} ${styles['review-btn--edit']}`} onClick={() => handleEditClick(review)}>Edit</button>
-                        )}
-                      </div>
                     </li>
                   );
                 })}
@@ -499,10 +491,21 @@ const ProductDetailsPage: React.FC = () => {
             <aside className={styles['review-form-container']}>
               <div className={styles['review-form-card']}>
                 <h3 className={styles['review-form-card__title']}>{editingReviewId ? 'Edit Your Review' : 'Write a Review'}</h3>
+                
+                {/* --- CONDITIONAL FORM DISPLAY --- */}
                 {!userInfo ? (
-                  <p className="text-muted text-sm">Please <Link to="/login" className="text-primary fw-bold">sign in</Link> to write a review.</p>
+                  <p className="text-muted text-sm">Please <Link to="/login" style={{ color: 'var(--color-primary-600)', fontWeight: 'bold' }}>sign in</Link> to write a review.</p>
                 ) : !hasPurchased ? (
-                  <p className="text-muted text-sm">Only verified buyers can review this item.</p>
+                  <div className={styles['empty-state-box']}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                    <p>Only verified buyers can review this item.</p>
+                  </div>
+                ) : hasReviewed && !editingReviewId ? (
+                  <div className={styles['success-state-box']}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <h4>Review Submitted</h4>
+                    <p>You have already given your review for this product.</p>
+                  </div>
                 ) : (
                   <form onSubmit={submitReviewHandler} className={styles['review-form']}>
                     {errorCreateReview && <div className={`${styles['state-container']} ${styles['state-container--error']} mb-3`}><p className={styles['state-message']}>{errorCreateReview}</p></div>}
@@ -521,15 +524,17 @@ const ProductDetailsPage: React.FC = () => {
 
                     <div className={styles['form-group']}>
                       <label htmlFor="comment" className={styles['form-label']}>Review</label>
-                      <textarea id="comment" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} required className={styles['form-input']}></textarea>
+                      <textarea id="comment" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} required className={styles['form-input']} placeholder="Tell us what you think..."></textarea>
                     </div>
 
                     <div className={styles['review-form__actions']}>
-                      <button disabled={loadingCreateReview || loadingUpdateReview} type="submit" className={`${styles.btn} ${styles['btn--primary']} ${styles['btn--full']}`}>
-                        {loadingCreateReview || loadingUpdateReview ? 'Processing...' : (editingReviewId ? "Update" : "Submit")}
+                      <button disabled={loadingCreateReview || loadingUpdateReview} type="submit" className="btn btn--primary" style={{ width: '100%' }}>
+                        {loadingCreateReview || loadingUpdateReview ? 'Processing...' : (editingReviewId ? "Update Review" : "Submit Review")}
                       </button>
                       {editingReviewId && (
-                        <button type="button" className={`${styles.btn} ${styles['btn--secondary']} ${styles['btn--full']} mt-2`} onClick={() => { setEditingReviewId(null); setRating(0); setComment(''); }}>Cancel</button>
+                        <button type="button" className="btn btn--secondary mt-2" style={{ width: '100%' }} onClick={() => { setEditingReviewId(null); setRating(0); setComment(''); }}>
+                          Cancel
+                        </button>
                       )}
                     </div>
                   </form>
@@ -538,7 +543,6 @@ const ProductDetailsPage: React.FC = () => {
             </aside>
           </div>
         </section>
-
         {/* --- HORIZONTAL SCROLL SIMILAR PRODUCTS SECTION --- */}
         {displaySimilarProducts.length > 0 && (
           <section style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb' }}>
