@@ -298,9 +298,18 @@
 }
 
 /* --- Order Summary --- */
+/* --- Order Summary --- */
 .order-sidebar {
-    position: sticky;
-    top: var(--space-20); /* TWEAKED: Relative to variables rather than fixed px */
+    /* Normal document flow for mobile screens */
+    width: 100%;
+}
+
+@media (min-width: 992px) {
+    .order-sidebar {
+        position: sticky;
+        top: var(--space-20); 
+        /* Only sticks when the screen is wide enough for the 2-column grid */
+    }
 }
 
 .summary-card {

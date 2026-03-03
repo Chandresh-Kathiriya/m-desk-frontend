@@ -97,11 +97,19 @@
 }
 
 /* ==========================================================================
-     LEFT COLUMN: Image Gallery
-     ========================================================================== */
+     LEFT COLUMN: Image Gallery
+     ========================================================================== */
 .product-gallery {
-    position: sticky;
-    top: 100px;
+    /* Normal document flow for mobile screens to prevent overlap */
+    width: 100%;
+}
+
+@media (min-width: 900px) {
+    .product-gallery {
+        position: sticky;
+        top: 100px;
+        /* Only sticks when the screen is wide enough for the 2-column grid */
+    }
 }
 
 .product-gallery__main-wrapper {
@@ -341,6 +349,7 @@
     display: flex;
     gap: var(--space-3);
     margin-bottom: var(--space-3);
+    max-width: 90vw;
 }
 
 .custom-select-wrapper {
@@ -524,10 +533,6 @@
     display: block;
     font-style: italic;
     margin-top: 2px;
-}
-
-.review-card__rating {
-    /* Adjusted because rating is now inside the author block */
 }
 
 .review-card__comment {
