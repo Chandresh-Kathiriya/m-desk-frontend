@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { getStorefrontProductDetails, listSimilarProducts } from '../../../store/actions/storefront/productActions';
@@ -18,6 +18,9 @@ const ProductDetailsPage: React.FC = () => {
   const dispatch = useDispatch<any>();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // --- NEW: SCROLL REF FOR SIMILAR PRODUCTS ---
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // --- REDUX STATES ---
   const userAuth = useSelector((state: RootState) => state.userAuth || {});
@@ -68,10 +71,16 @@ const ProductDetailsPage: React.FC = () => {
     };
   }, [dispatch, id]);
 
-  // 2. Fetch Similar Products once category is known
+  // 2. Fetch Similar Products using the Waterfall Strategy
   useEffect(() => {
-    if (product?.productCategory?._id && product?._id) {
-      dispatch(listSimilarProducts(product.productCategory._id, product._id));
+    if (product && product._id) {
+        // Safely extract the IDs based on how backend populated them
+        const typeVal = product.productType?._id || product.productType || '';
+        const categoryVal = product.productCategory?._id || product.productCategory || product.category?._id || product.category || '';
+        const brandVal = product.brand?._id || product.brand || '';
+
+        // Dispatch the action with all the data
+        dispatch(listSimilarProducts(product._id, typeVal, categoryVal, brandVal));
     }
   }, [dispatch, product]);
 
@@ -170,6 +179,81 @@ const ProductDetailsPage: React.FC = () => {
     }
   }, [selectedColor, product, mainImage, displayImages]);
 
+  // --- INTELLIGENT SIMILAR PRODUCTS COMPILER & SORTER ---
+  const displaySimilarProducts = useMemo(() => {
+      const list: any[] = [];
+
+      // 1. PRIORITY #1: Other Colors of the CURRENT Product
+      if (product && product.variants) {
+          const uniqueColors = Array.from(new Set(product.variants.map((v: any) => v.color))) as string[];
+          uniqueColors.forEach(color => {
+              if (color.toLowerCase().trim() !== selectedColor.toLowerCase().trim()) {
+                  const colorImages = product.images?.filter((img: any) => img.color && img.color.toLowerCase().trim() === color.toLowerCase().trim());
+                  list.push({
+                      ...product,
+                      _id: `${product._id}-${color}`,
+                      originalId: product._id,
+                      displayColor: color,
+                      images: colorImages?.length > 0 ? colorImages : product.images
+                  });
+              }
+          });
+      }
+
+      // 2. EXPLICIT FRONTEND SORTING: Split into Same Type vs Other Randoms
+      let sortedSimilar: any[] = [];
+      if (similarProducts && similarProducts.length > 0) {
+          const targetTypeId = product.productType?._id || product.productType;
+          
+          const sameTypeProducts = similarProducts.filter((p: any) => {
+              const pType = p.productType?._id || p.productType;
+              return pType && targetTypeId && pType.toString() === targetTypeId.toString();
+          });
+          
+          const otherProducts = similarProducts.filter((p: any) => {
+              const pType = p.productType?._id || p.productType;
+              return !pType || !targetTypeId || pType.toString() !== targetTypeId.toString();
+          });
+
+          // Priority #2: Same Product Types. Priority #3: Other Category Products
+          sortedSimilar = [...sameTypeProducts, ...otherProducts];
+      }
+
+      // 3. Flatten the sorted Similar Products
+      sortedSimilar.forEach((simProduct: any) => {
+          const uniqueColors = Array.from(new Set(simProduct.variants?.map((v: any) => v.color))) as string[];
+          
+          if (!uniqueColors || uniqueColors.length === 0) {
+              list.push({ ...simProduct, originalId: simProduct._id, displayColor: null });
+          } else {
+              uniqueColors.forEach(color => {
+                  const colorImages = simProduct.images?.filter((img: any) => img.color && img.color.toLowerCase().trim() === color.toLowerCase().trim());
+                  list.push({
+                      ...simProduct,
+                      _id: `${simProduct._id}-${color}`,
+                      originalId: simProduct._id,
+                      displayColor: color,
+                      images: colorImages?.length > 0 ? colorImages : simProduct.images
+                  });
+              });
+          }
+      });
+
+      // 4. Return up to 15 items for the horizontal scroll
+      return list.slice(0, 15);
+  }, [product, selectedColor, similarProducts]);
+
+  // --- NEW: HORIZONTAL SCROLL HANDLER ---
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+        const scrollAmount = 300; // Pixels to scroll per click
+        scrollRef.current.scrollBy({
+            left: direction === 'left' ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+        });
+    }
+  };
+
   if (loading) return <div className={styles['state-container']}><div className={styles.spinner}></div></div>;
   if (error) return <div className="container mt-8"><div className={`${styles['state-container']} ${styles['state-container--error']}`}><p className={styles['state-message']}>{error}</p></div></div>;
   if (!product || !product._id || product._id !== id) return <div className={styles['state-container']}><div className={styles.spinner}></div></div>;
@@ -196,11 +280,7 @@ const ProductDetailsPage: React.FC = () => {
 
   const addToCartHandler = () => {
     if (currentVariant) {
-      // PASS navigate AS THE 4TH ARGUMENT HERE:
       dispatch(addToCart(product, currentVariant, qty, navigate)); 
-      
-      // Note: If you are using the visual "Added to Cart ✅" trick we built earlier, 
-      // you might want to wrap it in a check so it doesn't turn green if they aren't logged in.
       if (userInfo && userInfo.token) {
           setAddedToCart(true);
           setTimeout(() => setAddedToCart(false), 2500);
@@ -245,7 +325,8 @@ const ProductDetailsPage: React.FC = () => {
             Back to Shop
           </Link>
           <span className={styles['breadcrumb__divider']}>/</span>
-          <span className={styles['breadcrumb__current']}>{product.productCategory?.name}</span>
+          {/* Display category name fallback if productCategory isn't populated */}
+          <span className={styles['breadcrumb__current']}>{product.category?.name || product.productCategory?.name || 'Product'}</span>
         </nav>
 
         <div className={styles['product-layout']}>
@@ -458,46 +539,103 @@ const ProductDetailsPage: React.FC = () => {
           </div>
         </section>
 
-        {/* --- SIMILAR PRODUCTS SECTION --- */}
-        {similarProducts.length > 0 && (
+        {/* --- HORIZONTAL SCROLL SIMILAR PRODUCTS SECTION --- */}
+        {displaySimilarProducts.length > 0 && (
           <section style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '1.5rem', color: '#111827' }}>You Might Also Like</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.5rem' }}>
-              {similarProducts.map((p: any) => (
-                <Link to={`/product/${p._id}`} key={p._id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div style={{ borderRadius: '8px', overflow: 'hidden', transition: 'transform 0.2s', backgroundColor: '#fff', border: '1px solid #f3f4f6' }} 
-                       onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} 
-                       onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                    <div style={{ aspectRatio: '4/5', backgroundColor: '#f3f4f6', position: 'relative' }}>
-                      <img 
-                        src={p.images?.length > 0 ? p.images[0].url : 'https://via.placeholder.com/400x500?text=No+Image'} 
-                        alt={p.productName} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
-                      />
-                    </div>
-                    <div style={{ padding: '1rem' }}>
-                      <div style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
-                        {p.brand?.name || 'Exclusive'}
+            
+            {/* WRAPPER FOR SCROLL BUTTONS */}
+            <div style={{ position: 'relative' }}>
+                
+                {/* LEFT SCROLL BUTTON */}
+                <button 
+                    onClick={(e) => { e.preventDefault(); handleScroll('left'); }}
+                    style={{
+                        position: 'absolute', left: '0px', top: 'calc(50% - 20px)', zIndex: 10,
+                        width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                    }}
+                    aria-label="Scroll left"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+
+                {/* THE SCROLLABLE CONTAINER */}
+                <div 
+                    ref={scrollRef}
+                    style={{ 
+                        display: 'flex', 
+                        overflowX: 'auto', 
+                        gap: '1.5rem', 
+                        paddingBottom: '1.5rem',
+                        scrollSnapType: 'x mandatory', 
+                        scrollbarWidth: 'none', /* Hide scrollbar for cleaner look with buttons */
+                        msOverflowStyle: 'none', 
+                        WebkitOverflowScrolling: 'touch'
+                    }}
+                >
+                  {displaySimilarProducts.map((p: any) => (
+                    <Link to={`/product/${p.originalId || p._id}${p.displayColor ? `?color=${p.displayColor}` : ''}`} key={p._id} 
+                        style={{ 
+                            textDecoration: 'none', 
+                            color: 'inherit',
+                            flex: '0 0 220px', 
+                            scrollSnapAlign: 'start' 
+                        }}>
+                      <div style={{ borderRadius: '8px', overflow: 'hidden', transition: 'transform 0.2s', backgroundColor: '#fff', border: '1px solid #f3f4f6', height: '100%' }} 
+                           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'} 
+                           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                        <div style={{ aspectRatio: '4/5', backgroundColor: '#f3f4f6', position: 'relative' }}>
+                          <img 
+                            src={p.images?.length > 0 ? p.images[0].url : 'https://via.placeholder.com/400x500?text=No+Image'} 
+                            alt={p.productName} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
+                          />
+                          {p.displayColor && (
+                              <span style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: '#111827', color: '#fff', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px', zIndex: 2 }}>
+                                  {p.displayColor}
+                              </span>
+                          )}
+                        </div>
+                        <div style={{ padding: '1rem' }}>
+                          <div style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px' }}>
+                            {p.brand?.name || 'Exclusive'}
+                          </div>
+                          <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {p.productName}
+                          </h3>
+                          <div style={{ fontWeight: 'bold', color: '#111827' }}>
+                            {(() => {
+                              if (!p.variants || p.variants.length === 0) return '₹0.00';
+                              const mrps = p.variants.map((v: any) => {
+                                const pr = Number(v.salesPrice) || 0;
+                                const tx = Number(v.salesTax) || 0;
+                                return pr + (pr * (tx / 100));
+                              });
+                              return `From ₹${Math.min(...mrps).toFixed(2)}`;
+                            })()}
+                          </div>
+                        </div>
                       </div>
-                      <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {p.productName}
-                      </h3>
-                      <div style={{ fontWeight: 'bold', color: '#111827' }}>
-                        {/* Calculate the minimum price to display "From ₹X" */}
-                        {(() => {
-                          if (!p.variants || p.variants.length === 0) return '₹0.00';
-                          const mrps = p.variants.map((v: any) => {
-                            const pr = Number(v.salesPrice) || 0;
-                            const tx = Number(v.salesTax) || 0;
-                            return pr + (pr * (tx / 100));
-                          });
-                          return `From ₹${Math.min(...mrps).toFixed(2)}`;
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* RIGHT SCROLL BUTTON */}
+                <button 
+                    onClick={(e) => { e.preventDefault(); handleScroll('right'); }}
+                    style={{
+                        position: 'absolute', right: '0px', top: 'calc(50% - 20px)', zIndex: 10,
+                        width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                    }}
+                    aria-label="Scroll right"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+
             </div>
           </section>
         )}

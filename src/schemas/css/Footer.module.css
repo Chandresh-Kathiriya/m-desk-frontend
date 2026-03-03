@@ -59,6 +59,16 @@
   letter-spacing: -0.02em;
 }
 
+/* --- FIX: Constrain Footer Logo Size --- */
+.footer__brand-img {
+  width: 160px; /* Constrain the width */
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  margin-bottom: var(--space-4); /* Add some breathing room below it */
+}
+
 .footer__title {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-semibold);

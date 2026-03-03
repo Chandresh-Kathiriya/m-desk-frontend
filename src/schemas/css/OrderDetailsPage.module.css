@@ -11,7 +11,7 @@
 }
 
 .order-page__container {
-    max-width: 1200px;
+    max-width: var(--container-max-width, 1440px);
     margin: 0 auto;
     padding: 0 var(--space-6); /* ADDED: Prevents edge-touching on smaller screens */
 }

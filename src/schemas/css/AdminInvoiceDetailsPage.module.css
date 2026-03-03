@@ -10,7 +10,7 @@
 }
 
 .container {
-    max-width: 800px; /* Kept narrower for standard Invoice readability */
+    max-width: var(--container-max-width, 1440px);
     margin: 0 auto;
 }
 
@@ -190,7 +190,7 @@
 
 .summary-box {
     width: 100%;
-    max-width: 340px;
+    max-width: var(--container-max-width, 1440px);
     background-color: var(--color-neutral-50);
     padding: var(--space-6);
     border-radius: var(--radius-lg);

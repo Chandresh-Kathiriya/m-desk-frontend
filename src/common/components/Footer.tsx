@@ -19,7 +19,16 @@ const Footer: React.FC = () => {
           
           {/* Column 1: Brand & About */}
           <div className={`${styles['footer__column']} ${styles['footer__column--brand']}`}>
-            <h3 className={styles['footer__brand-name']}>{text.brandName || 'Storefront'}</h3>
+          <Link to="/" className={styles['footer__brand']} style={{ textDecoration: 'none' }}>
+          <div className={styles['footer__brand-icon']} style={{ display: 'flex', alignItems: 'center' }}>
+            {/* Swapped inline styles for the responsive CSS class */}
+            <img 
+              src="/logo_big-dark_bg.png" 
+              alt="MDesk Logo" 
+              className={styles['footer__brand-img']} 
+            />
+          </div>
+        </Link>
             <p className={styles['footer__text']}>
               Curating the best products for your modern lifestyle. Quality and design at the forefront of everything we do.
             </p>

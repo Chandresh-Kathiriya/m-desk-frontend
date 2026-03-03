@@ -43,7 +43,7 @@ const AdminOrdersPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <h1 className={styles['page-title']}>Manage Orders</h1>
             {/* --- UPDATED BUTTON TO NAVIGATE TO NEW PAGE --- */}
-            <Link to="/admin/order/create" className={`${styles.btn} ${styles['btn-primary']}`} style={{ textDecoration: 'none' }}>
+            <Link to="/admin/order/create" className={`btn btn-primary`} style={{ textDecoration: 'none' }}>
               + Create Manual Order
             </Link>
           </div>

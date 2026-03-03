@@ -10,7 +10,7 @@
 }
 
 .container {
-    max-width: 800px; /* Narrower width for focused form entry */
+    max-width: var(--container-max-width, 1440px);
     margin: 0 auto;
 }
 

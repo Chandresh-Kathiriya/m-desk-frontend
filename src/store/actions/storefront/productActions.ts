@@ -56,22 +56,28 @@ export const getStorefrontProductDetails = (id: string) => async (dispatch: any)
   }
 };
 
-export const listSimilarProducts = (categoryId: string, currentProductId: string) => async (dispatch: any) => {
+// Update the parameters to accept all three values
+export const listSimilarProducts = (productId: string, type: string, category: string, brand: string) => async (dispatch: any) => {
   try {
-      dispatch({ type: STOREFRONT_SIMILAR_PRODUCTS_REQUEST });
+      dispatch({ type: 'STOREFRONT_SIMILAR_PRODUCTS_REQUEST' });
 
-      const { data } = await axios.get(`/api/products/public?categories=${categoryId}`);
-      
-      // Filter out the current product and grab only the top 4
-      const filteredProducts = data.products
-          .filter((p: any) => p._id !== currentProductId)
-          .slice(0, 4);
+      // Build the query string dynamically
+      let queryParams = new URLSearchParams();
+      if (type) queryParams.append('type', type);
+      if (category) queryParams.append('category', category);
+      if (brand) queryParams.append('brand', brand);
 
-      dispatch({ type: STOREFRONT_SIMILAR_PRODUCTS_SUCCESS, payload: filteredProducts });
+      // Your API endpoint might differ slightly, adjust if needed (e.g., /api/products/similar/:id)
+      const { data } = await axios.get(`/api/products/${productId}/similar?${queryParams.toString()}`);
+
+      dispatch({
+          type: 'STOREFRONT_SIMILAR_PRODUCTS_SUCCESS',
+          payload: data,
+      });
   } catch (error: any) {
       dispatch({
-          type: STOREFRONT_SIMILAR_PRODUCTS_FAIL,
-          payload: error.response?.data?.message || error.message,
+          type: 'STOREFRONT_SIMILAR_PRODUCTS_FAIL',
+          payload: error.response && error.response.data.message ? error.response.data.message : error.message,
       });
   }
 };

@@ -6,7 +6,7 @@
 }
 
 .container {
-    max-width: 800px; /* Kept narrower for settings pages to look focused */
+    max-width: var(--container-max-width, 1440px);
     margin: 0 auto;
 }
 

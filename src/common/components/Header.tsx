@@ -23,7 +23,6 @@ const Header: React.FC = () => {
   const adminAuth = useSelector((state: RootState) => state.adminAuth);
   const { isAuthenticated: isAdminAuth, adminInfo } = adminAuth;
 
-  // Helper function to handle active classes for CSS Modules
   const getActiveClass = ({ isActive }: { isActive: boolean }) =>
     `${styles['header__nav-link']} ${isActive ? styles['header__nav-link--active'] : ''}`;
 
@@ -49,15 +48,14 @@ const Header: React.FC = () => {
     <header className={styles.header}>
       <div className={styles['header__container']}>
 
-        {/* --- BRAND LOGO UPDATED HERE --- */}
+        {/* --- BRAND LOGO --- */}
         <Link to="/" className={styles['header__brand']} style={{ textDecoration: 'none' }}>
           <div className={styles['header__brand-icon']} style={{ display: 'flex', alignItems: 'center' }}>
+            {/* Swapped inline styles for the responsive CSS class */}
             <img 
               src="/logo_big.png" 
               alt="MDesk Logo" 
-              width="200" 
-              height="auto" 
-              style={{ display: 'block', objectFit: 'contain' }} 
+              className={styles['header__brand-img']} 
             />
           </div>
         </Link>
@@ -97,7 +95,6 @@ const Header: React.FC = () => {
                   </NavLink>
                 </li>
 
-                {/* --- PRODUCTS DROPDOWN --- */}
                 <li className={`${styles['header__nav-item']} ${styles['header__dropdown-wrapper']}`}>
                   <div className={styles['header__nav-link']}>
                     <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -125,7 +122,6 @@ const Header: React.FC = () => {
                   </NavLink>
                 </li>
 
-                {/* --- INVOICES & BILLS DROPDOWN --- */}
                 <li className={`${styles['header__nav-item']} ${styles['header__dropdown-wrapper']}`}>
                   <div className={styles['header__nav-link']}>
                     <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
