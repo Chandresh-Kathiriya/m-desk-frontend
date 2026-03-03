@@ -8,7 +8,7 @@ import styles from '../../../schemas/css/AdminOrdersPage.module.css';
 
 const AdminOrdersPage: React.FC = () => {
   const dispatch = useDispatch<any>();
-  const [timeRange, setTimeRange] = useState('all'); 
+  const [timeRange, setTimeRange] = useState('all');
 
   const adminAuth = useSelector((state: RootState) => state.adminAuth || {});
   const userInfo = (adminAuth as any).adminInfo || (adminAuth as any).userInfo;
@@ -28,46 +28,65 @@ const AdminOrdersPage: React.FC = () => {
     if (timeRange === 'all') return true;
     const orderDate = new Date(order.createdAt);
     const now = new Date();
-    
+
     if (timeRange === 'today') return orderDate.toDateString() === now.toDateString();
     if (timeRange === 'week') return orderDate >= new Date(now.setDate(now.getDate() - 7));
     if (timeRange === 'month') return orderDate >= new Date(now.setMonth(now.getMonth() - 1));
     return true;
   });
 
+  // 2. Sort the filtered orders (Newest first, with fallback to Database ID)
+  const sortedOrders = [...filteredOrders].sort((a: any, b: any) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+
+    // If the dates/times are different, sort normally (Newest first)
+    if (dateA !== dateB) {
+      return dateB - dateA;
+    }
+
+    // If the dates are EXACTLY the same (e.g. manual orders on the same day),
+    // sort by the MongoDB _id descending. (Newer IDs are alphanumerically larger).
+    return b._id.localeCompare(a._id);
+  });
+
   return (
     <main className={styles['page-wrapper']}>
       <div className={styles.container}>
-        
+
         <header className={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <h1 className={styles['page-title']}>Manage Orders</h1>
-            {/* --- UPDATED BUTTON TO NAVIGATE TO NEW PAGE --- */}
-            <Link to="/admin/order/create" className={`btn btn-primary`} style={{ textDecoration: 'none' }}>
+          {/* --- LEFT SIDE: Title --- */}
+          <h1 className={styles['page-title']}>Manage Orders</h1>
+
+          {/* --- RIGHT SIDE: Filter & Button --- */}
+          <div className={styles['header-actions']}>
+
+            <div className={styles['filter-bar']}>
+              <div className={styles['filter-icon']}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </div>
+              <span className={styles['filter-label']}>Order Date:</span>
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                className={styles['filter-select']}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+              </select>
+            </div>
+
+            <Link to="/admin/order/create" className="btn btn-primary" style={{ textDecoration: 'none' }}>
               + Create Manual Order
             </Link>
-          </div>
-          
-          <div className={styles['filter-bar']}>
-            <div className={styles['filter-icon']}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-            </div>
-            <span className={styles['filter-label']}>Order Date:</span>
-            <select 
-              value={timeRange} 
-              onChange={(e) => setTimeRange(e.target.value)} 
-              className={styles['filter-select']}
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-            </select>
+
           </div>
         </header>
 
@@ -97,77 +116,87 @@ const AdminOrdersPage: React.FC = () => {
                     <th className={styles['align-right']}>Total</th>
                     <th className={styles['align-right']}>Earnings</th>
                     <th className={styles['align-center']}>Payment Status</th> {/* UPDATED HEADER */}
+                    <th className={styles['align-center']}>Type</th>
                     <th className={styles['align-center']}>Delivered</th>
                     <th className={styles['align-right']}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order: any) => {
-                    const totalCost = order.totalCost || order.totalPrice; 
+                  {sortedOrders.map((order: any) => {
+                    const totalCost = order.totalCost || order.totalPrice;
                     const earnings = order.totalPrice - totalCost;
 
                     return (
-                    <tr key={order._id}>
-                      <td className={styles['text-code']}>
-                        {formatOrderId(order._id)}
-                        {order.isManualEntry && (
-                          <span style={{ marginLeft: '8px', fontSize: '10px', background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                            MANUAL
-                          </span>
-                        )}
-                      </td>
-                      
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span className={styles['text-user']} style={{ fontWeight: '600' }}>
-                            {order.user?.name || 'Deleted User'}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span className={styles['text-user']} style={{ fontWeight: '600' }}>
-                            {order.user?.email || 'N/A'}
-                          </span>
-                        </div>
-                      </td>
-                      
-                      <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                      <td className={`${styles['text-price']} ${styles['align-right']}`}>₹{order.totalPrice.toFixed(2)}</td>
-                      
-                      <td className={`${styles['text-price']} ${styles['align-right']}`} style={{ color: 'var(--color-success-600)' }}>
-                        ₹{earnings > 0 ? earnings.toFixed(2) : '0.00'}
-                      </td>
+                      <tr key={order._id}>
+                        <td className={styles['text-code']}>
+                          {formatOrderId(order._id)}
+                          {order.isManualEntry && (
+                            <span style={{ marginLeft: '8px', fontSize: '10px', background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                              MANUAL
+                            </span>
+                          )}
+                        </td>
 
-                      {/* --- UPDATED PAYMENT STATUS COLUMN --- */}
-                      <td className={styles['align-center']}>
-                        {order.isPaid ? (
-                          <span className={`${styles.badge} ${styles['badge--success']}`}>
-                            {order.paymentMethod === 'Stripe' ? 'Stripe (Immediate)' : 'Paid (Cash)'}
-                          </span>
-                        ) : (
-                          <span className={`${styles.badge} ${styles['badge--warning']}`}>
-                            {order.paymentMethod === 'Cash' && order.paymentTerms > 0 
-                              ? `Pending (Net ${order.paymentTerms} Days)` 
-                              : 'Pending'}
-                          </span>
-                        )}
-                      </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span className={styles['text-user']} style={{ fontWeight: '600' }}>
+                              {order.user?.name || 'Deleted User'}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span className={styles['text-user']} style={{ fontWeight: '600' }}>
+                              {order.user?.email || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
 
-                      <td className={styles['align-center']}>
-                        {order.isDelivered ? (
-                          <span className={`${styles.badge} ${styles['badge--success']}`}>Yes</span>
-                        ) : (
-                          <span className={`${styles.badge} ${styles['badge--warning']}`}>Pending</span>
-                        )}
-                      </td>
-                      <td className={styles['align-right']}>
-                        <Link to={`/admin/order/${order._id}`} className={styles['btn-details']}>
-                          Details
-                        </Link>
-                      </td>
-                    </tr>
-                  )})}
+                        <td>{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td className={`${styles['text-price']} ${styles['align-right']}`}>₹{order.totalPrice.toFixed(2)}</td>
+
+                        <td className={`${styles['text-price']} ${styles['align-right']}`} style={{ color: 'var(--color-success-600)' }}>
+                          ₹{earnings > 0 ? earnings.toFixed(2) : '0.00'}
+                        </td>
+
+                        {/* --- UPDATED PAYMENT STATUS COLUMN --- */}
+                        <td className={styles['align-center']}>
+                          {order.isPaid ? (
+                            <span className={`${styles.badge} ${styles['badge--success']}`}>
+                              {order.paymentMethod === 'Stripe' ? 'Stripe (Immediate)' : 'Paid (Cash)'}
+                            </span>
+                          ) : (
+                            <span className={`${styles.badge} ${styles['badge--warning']}`}>
+                              {order.paymentMethod === 'Cash' && order.paymentTerms > 0
+                                ? `Pending (Net ${order.paymentTerms} Days)`
+                                : 'Pending'}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className={styles['align-center']}>
+                          {order.isManualEntry ? (
+                            <span className={`${styles.badge} ${styles['badge--success']}`}>Backend</span>
+                          ) : (
+                            <span className={`${styles.badge} ${styles['badge--warning']}`}>Web-Store</span>
+                          )}
+                        </td>
+
+                        <td className={styles['align-center']}>
+                          {order.isDelivered ? (
+                            <span className={`${styles.badge} ${styles['badge--success']}`}>Yes</span>
+                          ) : (
+                            <span className={`${styles.badge} ${styles['badge--warning']}`}>Pending</span>
+                          )}
+                        </td>
+                        <td className={styles['align-right']}>
+                          <Link to={`/admin/order/${order._id}`} className={styles['btn-details']}>
+                            Details
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
                   {filteredOrders.length === 0 && (
                     <tr>
                       <td colSpan={9} style={{ textAlign: 'center', padding: 'var(--space-8)' }} className="text-muted">

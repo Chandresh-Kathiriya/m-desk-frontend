@@ -269,3 +269,93 @@
     cursor: not-allowed;
     box-shadow: none;
 }
+
+/* --- Additional styles for Multiple Item Entry --- */
+
+.product-adder-section {
+    background-color: var(--color-neutral-50);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--color-neutral-200);
+}
+
+.section-title {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-4);
+    color: var(--color-neutral-800);
+}
+
+.btn-secondary {
+    background-color: var(--color-neutral-800);
+    color: var(--color-neutral-0);
+    transition: background-color 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-neutral-900);
+}
+
+.btn-secondary:disabled {
+    background-color: var(--color-neutral-300);
+    cursor: not-allowed;
+}
+
+/* Table Styles */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: var(--space-6);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-md);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    background-color: var(--color-neutral-0);
+}
+
+.th {
+    padding: var(--space-3) var(--space-4);
+    background-color: var(--color-neutral-100);
+    border-bottom: 2px solid var(--color-neutral-200);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-neutral-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-neutral-200);
+    font-size: var(--text-sm);
+    color: var(--color-neutral-800);
+    vertical-align: middle;
+}
+
+.table tbody tr:last-child .td {
+    border-bottom: none;
+}
+
+.table tbody tr:hover {
+    background-color: var(--color-neutral-50);
+}
+
+.remove-btn {
+    background: none;
+    border: none;
+    color: var(--color-error-600);
+    font-size: var(--text-xl);
+    cursor: pointer;
+    padding: 0 var(--space-2);
+    transition: color 0.2s;
+    font-weight: bold;
+}
+
+.remove-btn:hover {
+    color: #991b1b; /* Darker red */
+}

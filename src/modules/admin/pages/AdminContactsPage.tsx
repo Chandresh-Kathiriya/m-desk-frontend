@@ -4,6 +4,9 @@ import { RootState } from '../../../store/reducers';
 import { listContacts, createContact, updateContact, deleteContact } from '../../../store/actions/admin/contactActions';
 import { CONTACT_CREATE_RESET, CONTACT_UPDATE_RESET, CONTACT_DELETE_RESET } from '../../../store/constants/admin/contactConstants';
 
+// Import your new Dialog Component! (Adjust the path if needed)
+import ContactFormDialog from '../../../common/components/ContactFormDialog';
+
 import styles from '../../../schemas/css/AdminContactsPage.module.css';
 
 const AdminContactsPage: React.FC = () => {
@@ -25,20 +28,17 @@ const AdminContactsPage: React.FC = () => {
     const contactDelete = useSelector((state: RootState) => state.contactDelete || {});
     const { error: errorDelete, success: successDelete } = contactDelete as any;
 
-    // --- LOCAL UI/FORM STATES ---
-    const [showForm, setShowForm] = useState(false);
+    // --- LOCAL UI STATES ---
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
-    const [formData, setFormData] = useState({
-        name: '', type: 'vendor', email: '', mobile: '',
-        address: { city: '', state: '', pincode: '' }
-    });
+    const [initialContactData, setInitialContactData] = useState<any>(null);
 
     // Initial Fetch & Success Resets
     useEffect(() => {
         if (successCreate || successUpdate) {
-            setShowForm(false);
+            setIsDialogOpen(false);
             setEditId(null);
-            setFormData({ name: '', type: 'vendor', email: '', mobile: '', address: { city: '', state: '', pincode: '' } });
+            setInitialContactData(null);
             dispatch({ type: CONTACT_CREATE_RESET });
             dispatch({ type: CONTACT_UPDATE_RESET });
         }
@@ -52,19 +52,8 @@ const AdminContactsPage: React.FC = () => {
         }
     }, [dispatch, userInfo, successCreate, successUpdate, successDelete]);
 
-    // Handle Form Input
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        if (['city', 'state', 'pincode'].includes(name)) {
-            setFormData({ ...formData, address: { ...formData.address, [name]: value } });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
-
-    // Handle Form Submission
-    const submitHandler = (e: React.FormEvent) => {
-        e.preventDefault();
+    // Handle Form Submission coming from the Dialog
+    const handleDialogSubmit = (formData: any) => {
         if (editId) {
             dispatch(updateContact(editId, formData));
         } else {
@@ -72,15 +61,21 @@ const AdminContactsPage: React.FC = () => {
         }
     };
 
-    // Populate Form for Editing
+    // Open Form for Editing
     const editHandler = (contact: any) => {
         setEditId(contact._id);
-        setFormData({
+        setInitialContactData({
             name: contact.name, type: contact.type, email: contact.email, mobile: contact.mobile,
             address: contact.address || { city: '', state: '', pincode: '' }
         });
-        setShowForm(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll up to see the form
+        setIsDialogOpen(true);
+    };
+
+    // Open Form for Creating
+    const createHandler = () => {
+        setEditId(null);
+        setInitialContactData(null);
+        setIsDialogOpen(true);
     };
 
     // Handle Deletion
@@ -88,13 +83,6 @@ const AdminContactsPage: React.FC = () => {
         if (window.confirm('Are you sure you want to delete this contact?')) {
             dispatch(deleteContact(id));
         }
-    };
-
-    // Toggle/Reset Form
-    const resetForm = () => {
-        setEditId(null);
-        setFormData({ name: '', type: 'vendor', email: '', mobile: '', address: { city: '', state: '', pincode: '' } });
-        setShowForm(!showForm);
     };
 
     const isProcessing = loadingCreate || loadingUpdate;
@@ -105,11 +93,8 @@ const AdminContactsPage: React.FC = () => {
                 
                 <header className={styles.header}>
                     <h1 className={styles['page-title']}>Manage Contacts</h1>
-                    <button 
-                        onClick={resetForm} 
-                        className={`${styles.btn} ${showForm ? styles['btn-secondary'] : styles['btn-primary']}`}
-                    >
-                        {showForm ? 'Cancel & Close' : '+ Add New Contact'}
+                    <button onClick={createHandler} className={`${styles.btn} ${styles['btn-primary']}`}>
+                        + Add New Contact
                     </button>
                 </header>
 
@@ -118,63 +103,15 @@ const AdminContactsPage: React.FC = () => {
                 {errorUpdate && <div className={`${styles.alert} ${styles['alert--error']}`}>{errorUpdate}</div>}
                 {errorDelete && <div className={`${styles.alert} ${styles['alert--error']}`}>{errorDelete}</div>}
 
-                {/* --- INLINE FORM --- */}
-                {showForm && (
-                    <div className={styles['form-card']}>
-                        <h2 className={styles['form-title']}>{editId ? 'Edit Contact' : 'Create New Contact'}</h2>
-                        <form onSubmit={submitHandler}>
-                            
-                            <div className={styles['form-grid-2']}>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>Name *</label>
-                                    <input type="text" name="name" className={styles.input} value={formData.name} onChange={handleInputChange} required placeholder="e.g. Acme Corp" />
-                                </div>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>Type *</label>
-                                    <select name="type" className={styles.select} value={formData.type} onChange={handleInputChange} required>
-                                        <option value="customer">Customer</option>
-                                        <option value="vendor">Vendor</option>
-                                        <option value="both">Both</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div className={styles['form-grid-2']}>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>Email</label>
-                                    <input type="email" name="email" className={styles.input} value={formData.email} onChange={handleInputChange} placeholder="contact@example.com" />
-                                </div>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>Mobile</label>
-                                    <input type="text" name="mobile" className={styles.input} value={formData.mobile} onChange={handleInputChange} placeholder="+1 555-0199" />
-                                </div>
-                            </div>
-
-                            <h3 className={styles['form-section-title']}>Address Details</h3>
-                            
-                            <div className={styles['form-grid-3']}>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>City</label>
-                                    <input type="text" name="city" className={styles.input} value={formData.address.city} onChange={handleInputChange} placeholder="New York" />
-                                </div>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>State</label>
-                                    <input type="text" name="state" className={styles.input} value={formData.address.state} onChange={handleInputChange} placeholder="NY" />
-                                </div>
-                                <div className={styles['form-group']}>
-                                    <label className={styles.label}>Pincode / Zip</label>
-                                    <input type="text" name="pincode" className={styles.input} value={formData.address.pincode} onChange={handleInputChange} placeholder="10001" />
-                                </div>
-                            </div>
-
-                            <div className={styles['form-actions']}>
-                                <button type="submit" className={`${styles.btn} ${styles['btn-primary']}`} disabled={isProcessing}>
-                                    {isProcessing ? <><div className={styles.spinner}></div> Processing...</> : (editId ? 'Update Contact' : 'Save Contact')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
+                {/* --- REUSABLE CONTACT FORM DIALOG --- */}
+                <ContactFormDialog 
+                    isOpen={isDialogOpen}
+                    onClose={() => setIsDialogOpen(false)}
+                    onSubmit={handleDialogSubmit}
+                    initialData={initialContactData}
+                    isProcessing={isProcessing}
+                    title={editId ? 'Edit Contact' : 'Create New Contact'}
+                />
 
                 {/* --- CONTACTS TABLE --- */}
                 <div className={styles['table-card']}>

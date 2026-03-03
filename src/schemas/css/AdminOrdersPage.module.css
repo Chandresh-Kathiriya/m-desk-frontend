@@ -25,7 +25,22 @@
 @media (min-width: 768px) {
     .header {
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: space-between; /* Pushes title left, actions right */
+        align-items: center;
+    }
+}
+
+/* Add this new block */
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    align-items: stretch;
+}
+
+@media (min-width: 640px) {
+    .header-actions {
+        flex-direction: row;
         align-items: center;
     }
 }

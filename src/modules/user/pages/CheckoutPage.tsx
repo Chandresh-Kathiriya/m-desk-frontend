@@ -33,10 +33,20 @@ const CheckoutPage: React.FC = () => {
     const { loading: couponLoading, success: successCoupon, couponInfo, error: errorCoupon } = couponValidate as any;
 
     // --- LOCAL STATE ---
+    // Shipping Address
     const [address, setAddress] = useState<string>(shippingAddress?.address || '');
     const [city, setCity] = useState<string>(shippingAddress?.city || '');
     const [postalCode, setPostalCode] = useState<string>(shippingAddress?.postalCode || '');
     const [country, setCountry] = useState<string>(shippingAddress?.country || '');
+
+    // Billing Address (NEW)
+    const [sameAsShipping, setSameAsShipping] = useState<boolean>(true);
+    const [billingAddress, setBillingAddress] = useState({
+        address: '',
+        city: '',
+        postalCode: '',
+        country: ''
+    });
 
     const [couponCode, setCouponCode] = useState('');
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
@@ -45,14 +55,14 @@ const CheckoutPage: React.FC = () => {
 
     const [pendingOrderData, setPendingOrderData] = useState<any>(null);
 
-    // --- FIX: Reset coupon when cart is empty (e.g., after successful order) ---
+    // Reset coupon when cart is empty
     useEffect(() => {
         if (cartItems.length === 0) {
             setCouponCode('');
             setDiscountAmount(0);
             setAppliedCoupon(null);
             setCouponMessage(null);
-            dispatch({ type: 'COUPON_VALIDATE_RESET' }); // Wipe coupon from Redux!
+            dispatch({ type: 'COUPON_VALIDATE_RESET' }); 
             navigate('/cart');
         }
     }, [cartItems, navigate, dispatch]);
@@ -97,7 +107,7 @@ const CheckoutPage: React.FC = () => {
         setDiscountAmount(0);
         setAppliedCoupon(null);
         setCouponMessage(null);
-        dispatch({ type: 'COUPON_VALIDATE_RESET' }); // Wipe coupon from Redux!
+        dispatch({ type: 'COUPON_VALIDATE_RESET' }); 
     };
 
     const confirmShippingHandler = (e: React.FormEvent) => {
@@ -105,14 +115,18 @@ const CheckoutPage: React.FC = () => {
         const updatedAddress = { address, city, postalCode, country };
         dispatch(saveShippingAddress(updatedAddress));
 
+        // Determine final billing address
+        const finalBillingAddress = sameAsShipping ? updatedAddress : billingAddress;
+
         const orderData = {
             orderItems: cartItems,
             shippingAddress: updatedAddress,
+            billingAddress: finalBillingAddress, // <-- Passed to backend
             paymentMethod: 'Stripe',
             itemsPrice: subtotal,
             shippingPrice,
             totalPrice,
-            discountAmount, // Good practice to save this to the DB too!
+            discountAmount, 
             couponCode: appliedCoupon?.code || null
         };
 
@@ -154,6 +168,13 @@ const CheckoutPage: React.FC = () => {
                                         <span className={styles['checkout-summary-box__value']}>{address}, {city}, {postalCode}, {country}</span>
                                         <button type="button" className={styles['checkout-summary-box__edit']} onClick={handleEditShipping}>Change</button>
                                     </div>
+                                    <div className={styles['checkout-summary-box__divider']}></div>
+                                    <div className={styles['checkout-summary-box__row']}>
+                                        <span className={styles['checkout-summary-box__label']}>Bill to</span>
+                                        <span className={styles['checkout-summary-box__value']}>
+                                            {sameAsShipping ? 'Same as shipping address' : `${billingAddress.address}, ${billingAddress.city}, ${billingAddress.postalCode}, ${billingAddress.country}`}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <h2 className={styles['checkout-step__title']}>Payment</h2>
@@ -188,7 +209,44 @@ const CheckoutPage: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className={styles['checkout-form__actions']}>
+                                    {/* --- BILLING ADDRESS SECTION --- */}
+                                    <div className={`${styles['form-group']} ${styles['form-group--full']}`} style={{ marginTop: '1.5rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '15px' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={sameAsShipping} 
+                                                onChange={(e) => setSameAsShipping(e.target.checked)} 
+                                                style={{ width: '18px', height: '18px', accentColor: 'var(--color-primary-600)' }}
+                                            />
+                                            Billing address is the same as shipping
+                                        </label>
+                                    </div>
+
+                                    {!sameAsShipping && (
+                                        <div className={styles['animate-fade-in']} style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' }}>
+                                            <h3 className={styles['checkout-step__title']} style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Billing address</h3>
+                                            <div className={`${styles['form-group']} ${styles['form-group--full']}`}>
+                                                <label htmlFor="billingCountry" className={styles['form-label']}>Country/Region</label>
+                                                <input id="billingCountry" type="text" className={styles['form-input']} placeholder="e.g. India" value={billingAddress.country} required={!sameAsShipping} onChange={(e) => setBillingAddress({...billingAddress, country: e.target.value})} />
+                                            </div>
+                                            <div className={`${styles['form-group']} ${styles['form-group--full']}`}>
+                                                <label htmlFor="billingAddress" className={styles['form-label']}>Address</label>
+                                                <input id="billingAddress" type="text" className={styles['form-input']} placeholder="House number and street name" value={billingAddress.address} required={!sameAsShipping} onChange={(e) => setBillingAddress({...billingAddress, address: e.target.value})} />
+                                            </div>
+                                            <div className={styles['form-row']}>
+                                                <div className={styles['form-group']}>
+                                                    <label htmlFor="billingCity" className={styles['form-label']}>City</label>
+                                                    <input id="billingCity" type="text" className={styles['form-input']} placeholder="e.g. Mumbai" value={billingAddress.city} required={!sameAsShipping} onChange={(e) => setBillingAddress({...billingAddress, city: e.target.value})} />
+                                                </div>
+                                                <div className={styles['form-group']}>
+                                                    <label htmlFor="billingPostalCode" className={styles['form-label']}>Postal code</label>
+                                                    <input id="billingPostalCode" type="text" className={styles['form-input']} placeholder="e.g. 400001" value={billingAddress.postalCode} required={!sameAsShipping} onChange={(e) => setBillingAddress({...billingAddress, postalCode: e.target.value.replace(/\D/g, '')})} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className={styles['checkout-form__actions']} style={{ marginTop: '2rem' }}>
                                         <Link to="/cart" className={styles['checkout-form__back']}>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                                             Return to cart

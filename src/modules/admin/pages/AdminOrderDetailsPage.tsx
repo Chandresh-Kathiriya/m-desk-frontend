@@ -24,7 +24,7 @@ const AdminOrderDetailsPage: React.FC = () => {
     const { loading: loadingDeliver, success: successDeliver, error: errorDeliver } = orderDeliver as any;
 
     const adminInvoiceByOrder = useSelector((state: RootState) => state.adminInvoiceByOrder || {});
-    const { invoice } = adminInvoiceByOrder as any;
+    const { invoice, loading: invoiceLoading, error: invoiceError } = adminInvoiceByOrder as any;
 
     const orderPayManual = useSelector((state: RootState) => state.orderPayManual || {});
     const { loading: isPaying, success: successPayManual, error: errorPayManual } = orderPayManual as any;
@@ -32,11 +32,26 @@ const AdminOrderDetailsPage: React.FC = () => {
     // Local State for Manual Payment Date
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
+    // --- 🔍 ADDED DEBUGGING LOGS ---
+    useEffect(() => {
+        console.log("🔍 DEBUG [Order State]:", { loading, error, order });
+    }, [order, loading, error]);
+
+    useEffect(() => {
+        console.log("🔍 DEBUG [Invoice State]:", { invoiceLoading, invoiceError, invoice });
+    }, [invoice, invoiceLoading, invoiceError]);
+
+    useEffect(() => {
+        console.log("🔍 DEBUG [Manual Pay State]:", { isPaying, successPayManual, errorPayManual });
+    }, [isPaying, successPayManual, errorPayManual]);
+    // -------------------------------
+
     // Fetch Order Data
     useEffect(() => {
         if (!order || order._id !== id || successDeliver) {
             dispatch({ type: ORDER_DELIVER_RESET });
             if (id) {
+                console.log(`🚀 DEBUG: Dispatching getOrderDetails for ID: ${id}`);
                 dispatch(getOrderDetails(id));
             }
         }
@@ -45,9 +60,11 @@ const AdminOrderDetailsPage: React.FC = () => {
     // Check for an attached Customer Invoice
     useEffect(() => {
         if (id && userInfo) {
+            console.log(`🚀 DEBUG: Dispatching getAdminInvoiceByOrderId for Order ID: ${id}`);
             dispatch(getAdminInvoiceByOrderId(id));
         }
         return () => {
+            console.log(`🧹 DEBUG: Cleaning up Invoice State on unmount`);
             dispatch({ type: ADMIN_INVOICE_BY_ORDER_RESET });
         };
     }, [dispatch, id, userInfo]);
@@ -57,10 +74,10 @@ const AdminOrderDetailsPage: React.FC = () => {
         if (successPayManual) {
             alert("Payment recorded successfully!");
             dispatch({ type: ORDER_PAY_MANUAL_RESET });
-            // Refresh the order to see the new total and paid status
             if (id) {
+                console.log(`🔄 DEBUG: Payment Success! Re-fetching Order and Invoice...`);
                 dispatch(getOrderDetails(id));
-                dispatch(getAdminInvoiceByOrderId(id)); // Refresh invoice too
+                dispatch(getAdminInvoiceByOrderId(id)); 
             }
         }
         if (errorPayManual) {
@@ -78,6 +95,7 @@ const AdminOrderDetailsPage: React.FC = () => {
     const handleMarkAsPaid = () => {
         if (!paymentDate) return alert("Please select a payment date.");
         if (id) {
+            console.log(`💸 DEBUG: Triggering Manual Pay for Date: ${paymentDate}`);
             dispatch(payOrderManual(id, paymentDate));
         }
     };
@@ -108,28 +126,77 @@ const AdminOrderDetailsPage: React.FC = () => {
                     {/* LEFT COLUMN */}
                     <div className={styles['main-column']}>
                         
-                        {/* Customer & Shipping Details */}
+                        {/* Order & Customer Details */}
                         <div className={styles.card}>
                             <div className={styles['card-header']}>
-                                <h2 className={styles['card-title']}>Customer & Shipping Details</h2>
+                                <h2 className={styles['card-title']}>Order & Customer Details</h2>
                             </div>
                             <div className={styles['card-body']}>
                                 <div className={styles['info-grid']}>
+                                    
                                     <div className={styles['info-group']}>
                                         <span className={styles['info-label']}>Customer Name</span>
-                                        <span className={styles['info-value']}>{order.user?.name}</span>
+                                        <span className={styles['info-value']} style={{ fontWeight: 'bold' }}>{order.user?.name}</span>
                                     </div>
                                     <div className={styles['info-group']}>
                                         <span className={styles['info-label']}>Email Address</span>
                                         <a href={`mailto:${order.user?.email}`} className={styles['info-link']}>{order.user?.email}</a>
                                     </div>
-                                    <div className={`${styles['info-group']} ${styles['info-group--full']}`}>
-                                        <span className={styles['info-label']}>Shipping Address</span>
+
+                                    <div className={styles['info-group']}>
+                                        <span className={styles['info-label']}>Order / Invoice Date</span>
+                                        <span className={styles['info-value']}>{new Date(order.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className={styles['info-group']}>
+                                        <span className={styles['info-label']}>Order Source</span>
                                         <span className={styles['info-value']}>
-                                            {order.shippingAddress?.address}, {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}, {order.shippingAddress?.country}
+                                            {order.isManualEntry ? (
+                                                <span className={`${styles.badge} ${styles['badge--info']}`}>Manual Entry</span>
+                                            ) : (
+                                                <span className={`${styles.badge} ${styles['badge--secondary']}`}>Storefront Checkout</span>
+                                            )}
                                         </span>
                                     </div>
-                                    <div className={`${styles['info-group']} ${styles['info-group--full']}`}>
+
+                                    {order.isManualEntry && (
+                                        <div className={`${styles['info-group']} ${styles['info-group--full']}`}>
+                                            <span className={styles['info-label']}>Created By (Admin)</span>
+                                            <span className={styles['info-value']} style={{ color: 'var(--color-primary-600)' }}>
+                                                {order.createdBy?.name || order.createdBy || 'Unknown Admin'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className={`${styles['info-group']} ${styles['info-group--full']}`} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                            <div>
+                                                <span className={styles['info-label']}>Shipping Address</span>
+                                                <div className={styles['info-value']} style={{ lineHeight: '1.6' }}>
+                                                    {order.shippingAddress?.address}<br/>
+                                                    {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}<br/>
+                                                    {order.shippingAddress?.country}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className={styles['info-label']}>Billing Address</span>
+                                                <div className={styles['info-value']} style={{ lineHeight: '1.6' }}>
+                                                    {order.billingAddress && order.billingAddress.address ? (
+                                                        <>
+                                                            {order.billingAddress.address}<br/>
+                                                            {order.billingAddress.city}, {order.billingAddress.postalCode}<br/>
+                                                            {order.billingAddress.country}
+                                                        </>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--color-neutral-500)', fontStyle: 'italic' }}>
+                                                            Same as Shipping Address
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={`${styles['info-group']} ${styles['info-group--full']}`} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
                                         <span className={styles['info-label']}>Delivery Status</span>
                                         <div>
                                             {order.isDelivered ? (
@@ -163,7 +230,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                                                     {item.name}
                                                 </Link>
                                                 <div className={styles['item-meta']}>
-                                                    SKU: {item.sku} | Color: {item.color}
+                                                    SKU: {item.sku} | Color: {item.color} | Size: {item.size}
                                                 </div>
                                             </div>
                                             
@@ -224,7 +291,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                                             value={paymentDate} 
                                             onChange={e => setPaymentDate(e.target.value)} 
                                             style={{ width: '100%', padding: '10px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
-                                            max={new Date().toISOString().split('T')[0]} // Cannot pick future dates
+                                            max={new Date().toISOString().split('T')[0]}
                                         />
                                         
                                         {order.manualPaymentDays > 0 && (

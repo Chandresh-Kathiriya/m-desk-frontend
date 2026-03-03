@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import { RootState } from '../../../store/reducers';
 import { listUsers } from '../../../store/actions/admin/userActions';
 import { listAdminProducts } from '../../../store/actions/admin/productActions';
 import { createManualOrder } from '../../../store/actions/admin/orderActions';
 import { ORDER_CREATE_MANUAL_RESET } from '../../../store/constants/admin/orderConstants';
+
+import ContactFormDialog from '../../../common/components/ContactFormDialog'; 
 
 import styles from '../../../schemas/css/AdminOrderCreatePage.module.css';
 
@@ -13,12 +16,10 @@ const AdminOrderCreatePage: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
 
-    // Safely grab the token whether it's stored in adminAuth or userAuth
     const adminAuth = useSelector((state: RootState) => state.adminAuth || {});
     const userAuth = useSelector((state: RootState) => state.userAuth || {});
     const userInfo = (adminAuth as any).adminInfo || (userAuth as any).userInfo;
 
-    // --- REDUX STATES ---
     const userList = useSelector((state: RootState) => state.userList || {});
     const { users: usersList = [], loading: loadingUsers, error: errorUsers } = userList as any;
 
@@ -28,33 +29,64 @@ const AdminOrderCreatePage: React.FC = () => {
     const orderCreateManual = useSelector((state: RootState) => state.orderCreateManual || {});
     const { loading: isSubmitting, success, error: errorCreate } = orderCreateManual as any;
 
-    // --- LOCAL FORM STATE ---
-    const [manualOrder, setManualOrder] = useState({
-        user: '',
-        product: '',
-        variantSku: '',
-        qty: 1,
-        paymentStatus: 'done', // 'done' | 'pending'
-        paymentTerms: 0 // days
-    });
+    // --- OVERALL ORDER STATE ---
+    const [selectedUser, setSelectedUser] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('done'); 
+    const [paymentTerms, setPaymentTerms] = useState(0);
+    const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-    // 1. Initial Data Fetch
+    // --- ADDRESS STATES ---
+    const [shippingAddress, setShippingAddress] = useState({ address: '', city: '', postalCode: '', country: '' });
+    const [billingAddress, setBillingAddress] = useState({ address: '', city: '', postalCode: '', country: '' });
+    const [sameAsShipping, setSameAsShipping] = useState(true);
+
+    // --- CURRENT ITEM SELECTION STATE ---
+    const [currentProduct, setCurrentProduct] = useState('');
+    const [currentVariantSku, setCurrentVariantSku] = useState('');
+    const [currentQty, setCurrentQty] = useState(1);
+
+    // --- CART / ORDER ITEMS ARRAY ---
+    const [orderItems, setOrderItems] = useState<any[]>([]);
+
+    const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+    const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
     useEffect(() => {
         if (!userInfo || !userInfo.token) {
             navigate('/admin/login');
             return;
         }
-
         dispatch(listUsers());
         dispatch(listAdminProducts());
     }, [dispatch, userInfo, navigate]);
 
-    // 2. Handle Success State
+    // --- AUTO-POPULATE ADDRESS WHEN USER IS SELECTED ---
+    useEffect(() => {
+        if (selectedUser && selectedUser !== 'CREATE_NEW') {
+            const user = usersList.find((u: any) => u._id === selectedUser);
+            if (user && user.address) {
+                const defaultAddress = {
+                    address: user.address.address || '', 
+                    city: user.address.city || '',
+                    postalCode: user.address.pincode || '',
+                    country: user.address.state || 'India'
+                };
+                setShippingAddress(defaultAddress);
+                if (sameAsShipping) {
+                    setBillingAddress(defaultAddress);
+                }
+            }
+        } else {
+            setShippingAddress({ address: '', city: '', postalCode: '', country: '' });
+            setBillingAddress({ address: '', city: '', postalCode: '', country: '' });
+        }
+    }, [selectedUser, usersList, sameAsShipping]);
+
     useEffect(() => {
         if (success) {
             alert("Manual order created successfully!");
             dispatch({ type: ORDER_CREATE_MANUAL_RESET });
-            navigate('/admin/orders'); // Redirect back to orders list
+            navigate('/admin/orders');
         }
         if (errorCreate) {
             alert(`Failed to create order: ${errorCreate}`);
@@ -62,55 +94,139 @@ const AdminOrderCreatePage: React.FC = () => {
         }
     }, [success, errorCreate, dispatch, navigate]);
 
-    const selectedProductData = productsList.find((p: any) => p._id === manualOrder.product);
-    const selectedVariantData = selectedProductData?.variants?.find((v: any) => v.sku === manualOrder.variantSku);
+    const selectedProductData = productsList.find((p: any) => p._id === currentProduct);
+    const selectedVariantData = selectedProductData?.variants?.find((v: any) => v.sku === currentVariantSku);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // --- ADD ITEM TO CART LOGIC ---
+    const handleAddItem = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (!manualOrder.user || !manualOrder.product || !manualOrder.variantSku) {
-            return alert("Please complete all required fields.");
-        }
+        if (!currentProduct || !currentVariantSku || currentQty < 1) return alert("Please select a product, variant, and valid quantity.");
+        if (selectedVariantData.stock < currentQty) return alert(`Cannot add more than available stock (${selectedVariantData.stock}).`);
 
-        const price = Number(selectedVariantData.salesPrice) || 0;
+        const basePrice = Number(selectedVariantData.salesPrice) || 0;
         const taxPercent = Number(selectedVariantData.salesTax) || 0;
-        const baseTotal = price * manualOrder.qty;
-        const finalPriceWithTax = baseTotal + (baseTotal * (taxPercent / 100));
+        const unitPriceWithTax = basePrice + (basePrice * (taxPercent / 100));
+        
+        const existingIndex = orderItems.findIndex(item => item.sku === currentVariantSku);
 
-        const isPaid = manualOrder.paymentStatus === 'done';
-
-        const orderPayload = {
-            user: manualOrder.user,
-            orderItems: [{
+        if (existingIndex >= 0) {
+            const updatedItems = [...orderItems];
+            const newQty = updatedItems[existingIndex].qty + currentQty;
+            
+            // Check if adding more exceeds total stock
+            if (newQty > updatedItems[existingIndex].maxStock) {
+                return alert(`Cannot add more. Maximum stock available is ${updatedItems[existingIndex].maxStock}.`);
+            }
+            
+            updatedItems[existingIndex].qty = newQty;
+            setOrderItems(updatedItems);
+        } else {
+            setOrderItems([...orderItems, {
                 product: selectedProductData._id,
                 name: selectedProductData.productName,
                 image: selectedProductData.images?.[0]?.url || '',
-                price: price,
-                qty: manualOrder.qty,
+                price: basePrice,
+                unitPriceWithTax: unitPriceWithTax, 
+                qty: currentQty,
                 sku: selectedVariantData.sku,
                 color: selectedVariantData.color,
                 size: selectedVariantData.size,
-            }],
-            shippingAddress: { address: 'In-Store / Manual', city: 'N/A', postalCode: 'N/A', country: 'N/A' },
-            paymentMethod: 'Cash',
-            itemsPrice: finalPriceWithTax,
-            shippingPrice: 0,
-            totalPrice: finalPriceWithTax,
+                maxStock: selectedVariantData.stock // <-- Save stock limit for the table
+            }]);
+        }
+        setCurrentProduct(''); setCurrentVariantSku(''); setCurrentQty(1);
+    };
 
+    // --- NEW: IN-TABLE QUANTITY CONTROLS ---
+    const handleIncreaseQty = (index: number) => {
+        const updatedItems = [...orderItems];
+        if (updatedItems[index].qty < updatedItems[index].maxStock) {
+            updatedItems[index].qty += 1;
+            setOrderItems(updatedItems);
+        }
+    };
+
+    const handleDecreaseQty = (index: number) => {
+        const updatedItems = [...orderItems];
+        if (updatedItems[index].qty > 1) {
+            updatedItems[index].qty -= 1;
+            setOrderItems(updatedItems);
+        }
+    };
+
+    const handleRemoveItem = (indexToRemove: number) => {
+        setOrderItems(orderItems.filter((_, index) => index !== indexToRemove));
+    };
+
+    const grandTotal = orderItems.reduce((acc, item) => acc + (item.unitPriceWithTax * item.qty), 0);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!selectedUser) return alert("Please select a customer.");
+        if (orderItems.length === 0) return alert("Please add at least one product to the order.");
+        if (!invoiceDate) return alert("Please select an invoice date.");
+
+        if (!shippingAddress.address || !shippingAddress.city) {
+            return alert("Please provide a valid Shipping Address and City.");
+        }
+
+        const isPaid = paymentStatus === 'done';
+        const adminId = userInfo?.id || userInfo?._id;
+
+        const orderPayload = {
+            user: selectedUser,
+            invoiceDate,
+            createdBy: adminId, 
+            orderItems: orderItems.map(item => ({
+                product: item.product, name: item.name, image: item.image, price: item.price,
+                qty: item.qty, sku: item.sku, color: item.color, size: item.size
+            })),
+            shippingAddress: shippingAddress,
+            billingAddress: sameAsShipping ? shippingAddress : billingAddress,
+            paymentMethod: 'Cash',
+            itemsPrice: grandTotal,
+            shippingPrice: 0,
+            totalPrice: grandTotal,
             isPaid: isPaid,
-            paidAt: isPaid ? new Date() : null,
-            paymentTerms: !isPaid ? Number(manualOrder.paymentTerms) : 0,
+            paidAt: isPaid ? new Date(invoiceDate) : null,
+            paymentTerms: !isPaid ? Number(paymentTerms) : 0,
             isManualEntry: true
         };
 
         dispatch(createManualOrder(orderPayload));
     };
 
-    const isPageLoading = loadingUsers || loadingProducts;
-    const pageError = errorUsers || errorProducts;
+    const handleCustomerDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (e.target.value === 'CREATE_NEW') {
+            setIsCustomerDialogOpen(true);
+            setSelectedUser('');
+        } else {
+            setSelectedUser(e.target.value);
+        }
+    };
 
-    if (isPageLoading) {
-        return <div className={styles['page-wrapper']}><div style={{ textAlign: 'center', padding: '50px' }}>Loading configuration...</div></div>;
-    }
+    const handleCreateCustomerSubmit = async (formData: any) => {
+        try {
+            setIsCreatingCustomer(true);
+            const payload = {
+                name: formData.name, email: formData.email, mobile: formData.mobile, password: 'ManualUser@123',
+                city: formData.address.city, state: formData.address.state, pincode: formData.address.pincode, role: 'customer'
+            };
+            const { data } = await axios.post('/api/auth/register', payload, { headers: { 'Content-Type': 'application/json' } });
+            dispatch(listUsers());
+            if (data?.user?.id) setSelectedUser(data.user.id);
+            setIsCustomerDialogOpen(false);
+            alert('Customer created successfully! Their default password is: ManualUser@123');
+        } catch (err: any) {
+            alert(`Failed to create customer: ${err.response?.data?.message || err.message}`);
+        } finally {
+            setIsCreatingCustomer(false);
+        }
+    };
+
+    const isPageLoading = loadingUsers || loadingProducts;
+    if (isPageLoading) return <div className={styles['page-wrapper']}><div style={{ textAlign: 'center', padding: '50px' }}>Loading configuration...</div></div>;
 
     return (
         <main className={styles['page-wrapper']}>
@@ -118,62 +234,122 @@ const AdminOrderCreatePage: React.FC = () => {
 
                 <header className={styles.header}>
                     <Link to="/admin/orders" className={styles['back-link']}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                         Back to Orders
                     </Link>
                     <h1 className={styles['page-title']}>Create Manual Order</h1>
                 </header>
 
-                {pageError && <div style={{ color: 'red', marginBottom: '1rem' }}>{pageError}</div>}
+                {(errorUsers || errorProducts) && <div style={{ color: 'red', marginBottom: '1rem' }}>{errorUsers || errorProducts}</div>}
 
                 <div className={styles.card}>
                     <form onSubmit={handleSubmit} className={styles['form-layout']}>
 
-                        {/* 1. Customer Selection */}
-                        <div className={styles['form-group']}>
-                            <label className={styles.label}>Select Customer</label>
-                            <select
-                                required
-                                className={styles.select}
-                                value={manualOrder.user}
-                                onChange={(e) => setManualOrder({ ...manualOrder, user: e.target.value })}
-                            >
-                                <option value="">-- Choose Customer --</option>
-                                {usersList.map((u: any) => (
-                                    <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
-                                ))}
-                            </select>
+                        {/* 1. Customer & Invoice Date Selection */}
+                        <div className={styles['form-row']}>
+                            <div className={styles['form-group']} style={{ flex: 2 }}>
+                                <label className={styles.label}>Select Customer</label>
+                                <select required className={styles.select} value={selectedUser} onChange={handleCustomerDropdownChange}>
+                                    <option value="">-- Choose Customer --</option>
+                                    <option value="CREATE_NEW" style={{ fontWeight: 'bold', color: 'var(--color-primary-600)' }}>+ Create New Customer</option>
+                                    {usersList.map((u: any) => <option key={u._id} value={u._id}>{u.name} ({u.email || u.mobile})</option>)}
+                                </select>
+                            </div>
+                            <div className={styles['form-group']} style={{ flex: 1 }}>
+                                <label className={styles.label}>Invoice Date</label>
+                                <input type="date" required className={styles.input} value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                            </div>
                         </div>
 
-                        {/* 2. Product Selection */}
-                        <div className={styles['form-group']}>
-                            <label className={styles.label}>Select Product</label>
-                            <select
-                                required
-                                className={styles.select}
-                                value={manualOrder.product}
-                                onChange={(e) => setManualOrder({ ...manualOrder, product: e.target.value, variantSku: '' })}
-                            >
-                                <option value="">-- Choose Product --</option>
-                                {productsList.map((p: any) => (
-                                    <option key={p._id} value={p._id}>{p.productName}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <hr className={styles.divider} />
 
-                        {/* 3. Variant & Qty Selection */}
-                        {manualOrder.product && (
+                        {/* ADDRESS SECTION */}
+                        <div className={styles['product-adder-section']} style={{ backgroundColor: '#fff' }}>
+                            <h3 className={styles['section-title']}>Shipping Details</h3>
                             <div className={styles['form-row']}>
-                                <div className={styles['form-col-2']}>
-                                    <label className={styles.label}>Select Variant</label>
-                                    <select
-                                        required
-                                        className={styles.select}
-                                        value={manualOrder.variantSku}
-                                        onChange={(e) => setManualOrder({ ...manualOrder, variantSku: e.target.value })}
-                                    >
+                                <div className={styles['form-group']} style={{ flex: 2 }}>
+                                    <label className={styles.label}>Street Address</label>
+                                    <input type="text" required className={styles.input} placeholder="123 Main St, Apt 4B"
+                                        value={shippingAddress.address} onChange={e => setShippingAddress({...shippingAddress, address: e.target.value})} />
+                                </div>
+                            </div>
+                            <div className={styles['form-row']}>
+                                <div className={styles['form-group']} style={{ flex: 1 }}>
+                                    <label className={styles.label}>City</label>
+                                    <input type="text" required className={styles.input} placeholder="City"
+                                        value={shippingAddress.city} onChange={e => setShippingAddress({...shippingAddress, city: e.target.value})} />
+                                </div>
+                                <div className={styles['form-group']} style={{ flex: 1 }}>
+                                    <label className={styles.label}>State / Country</label>
+                                    <input type="text" required className={styles.input} placeholder="State / Country"
+                                        value={shippingAddress.country} onChange={e => setShippingAddress({...shippingAddress, country: e.target.value})} />
+                                </div>
+                                <div className={styles['form-group']} style={{ flex: 1 }}>
+                                    <label className={styles.label}>Pincode / ZIP</label>
+                                    <input type="text" required className={styles.input} placeholder="ZIP Code"
+                                        value={shippingAddress.postalCode} onChange={e => setShippingAddress({...shippingAddress, postalCode: e.target.value})} />
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={sameAsShipping} 
+                                        onChange={(e) => setSameAsShipping(e.target.checked)} 
+                                        style={{ width: '16px', height: '16px' }}
+                                    />
+                                    Billing/Invoice Address is the same as Shipping
+                                </label>
+                            </div>
+
+                            {!sameAsShipping && (
+                                <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem', marginTop: '1rem' }}>
+                                    <h3 className={styles['section-title']} style={{ fontSize: '16px' }}>Billing Address</h3>
+                                    <div className={styles['form-row']}>
+                                        <div className={styles['form-group']} style={{ flex: 2 }}>
+                                            <label className={styles.label}>Street Address</label>
+                                            <input type="text" required={!sameAsShipping} className={styles.input} placeholder="123 Main St, Apt 4B"
+                                                value={billingAddress.address} onChange={e => setBillingAddress({...billingAddress, address: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className={styles['form-row']}>
+                                        <div className={styles['form-group']} style={{ flex: 1 }}>
+                                            <label className={styles.label}>City</label>
+                                            <input type="text" required={!sameAsShipping} className={styles.input} placeholder="City"
+                                                value={billingAddress.city} onChange={e => setBillingAddress({...billingAddress, city: e.target.value})} />
+                                        </div>
+                                        <div className={styles['form-group']} style={{ flex: 1 }}>
+                                            <label className={styles.label}>State / Country</label>
+                                            <input type="text" required={!sameAsShipping} className={styles.input} placeholder="State / Country"
+                                                value={billingAddress.country} onChange={e => setBillingAddress({...billingAddress, country: e.target.value})} />
+                                        </div>
+                                        <div className={styles['form-group']} style={{ flex: 1 }}>
+                                            <label className={styles.label}>Pincode / ZIP</label>
+                                            <input type="text" required={!sameAsShipping} className={styles.input} placeholder="ZIP Code"
+                                                value={billingAddress.postalCode} onChange={e => setBillingAddress({...billingAddress, postalCode: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <hr className={styles.divider} />
+
+                        {/* 2. Add Product Section */}
+                        <div className={styles['product-adder-section']}>
+                            <h3 className={styles['section-title']}>Add Products</h3>
+                            <div className={styles['form-row']}>
+                                <div className={styles['form-group']} style={{ flex: 2 }}>
+                                    <label className={styles.label}>Product</label>
+                                    <select className={styles.select} value={currentProduct} onChange={(e) => { setCurrentProduct(e.target.value); setCurrentVariantSku(''); }}>
+                                        <option value="">-- Choose Product --</option>
+                                        {productsList.map((p: any) => <option key={p._id} value={p._id}>{p.productName}</option>)}
+                                    </select>
+                                </div>
+                                <div className={styles['form-group']} style={{ flex: 2 }}>
+                                    <label className={styles.label}>Variant</label>
+                                    <select className={styles.select} value={currentVariantSku} onChange={(e) => setCurrentVariantSku(e.target.value)} disabled={!currentProduct}>
                                         <option value="">-- Choose Color & Size --</option>
                                         {selectedProductData?.variants?.map((v: any) => (
                                             <option key={v.sku} value={v.sku} disabled={v.stock < 1}>
@@ -182,19 +358,82 @@ const AdminOrderCreatePage: React.FC = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className={styles['form-col-1']}>
-                                    <label className={styles.label}>Quantity</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min="1"
-                                        max={selectedVariantData?.stock || 1}
-                                        className={styles.input}
-                                        value={manualOrder.qty}
-                                        onChange={(e) => setManualOrder({ ...manualOrder, qty: Number(e.target.value) })}
-                                        disabled={!manualOrder.variantSku}
-                                    />
+                                <div className={styles['form-group']} style={{ flex: 1 }}>
+                                    <label className={styles.label}>Qty</label>
+                                    <input type="number" min="1" max={selectedVariantData?.stock || 1} className={styles.input} value={currentQty} onChange={(e) => setCurrentQty(Number(e.target.value))} disabled={!currentVariantSku} />
                                 </div>
+                                <div className={styles['form-group']} style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                    <button className={`${styles.btn} ${styles['btn-secondary']}`} onClick={handleAddItem} disabled={!currentVariantSku} style={{ height: '42px', padding: '0 20px' }}>Add Item</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Added Items Table */}
+                        {orderItems.length > 0 && (
+                            <div className={styles['table-wrapper']}>
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th className={styles.th}>Product</th>
+                                            <th className={styles.th}>Variant</th>
+                                            <th className={styles.th}>Price (Inc. Tax)</th>
+                                            <th className={styles.th} style={{ textAlign: 'center' }}>Qty</th>
+                                            <th className={styles.th}>Total</th>
+                                            <th className={styles.th}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {orderItems.map((item, index) => (
+                                            <tr key={`${item.sku}-${index}`}>
+                                                <td className={styles.td}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        {item.image && <img src={item.image} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />}
+                                                        <span style={{ fontWeight: 500 }}>{item.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className={styles.td}>{item.color} - {item.size}<br/><span style={{ fontSize: '12px', color: '#6b7280' }}>SKU: {item.sku}</span></td>
+                                                <td className={styles.td}>₹{item.unitPriceWithTax.toFixed(2)}</td>
+                                                
+                                                {/* --- NEW: In-Table Quantity Controls --- */}
+                                                <td className={styles.td}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDecreaseQty(index)}
+                                                            disabled={item.qty <= 1}
+                                                            style={{ 
+                                                                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                                border: '1px solid #cbd5e1', borderRadius: '4px', background: item.qty <= 1 ? '#f1f5f9' : '#fff', 
+                                                                cursor: item.qty <= 1 ? 'not-allowed' : 'pointer', fontSize: '16px', color: item.qty <= 1 ? '#94a3b8' : '#0f172a' 
+                                                            }}
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '500' }}>{item.qty}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleIncreaseQty(index)}
+                                                            disabled={item.qty >= item.maxStock}
+                                                            style={{ 
+                                                                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                                border: '1px solid #cbd5e1', borderRadius: '4px', background: item.qty >= item.maxStock ? '#f1f5f9' : '#fff', 
+                                                                cursor: item.qty >= item.maxStock ? 'not-allowed' : 'pointer', fontSize: '16px', color: item.qty >= item.maxStock ? '#94a3b8' : '#0f172a' 
+                                                            }}
+                                                            title={item.qty >= item.maxStock ? `Max stock is ${item.maxStock}` : ''}
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                </td>
+
+                                                <td className={styles.td} style={{ fontWeight: 'bold' }}>₹{(item.unitPriceWithTax * item.qty).toFixed(2)}</td>
+                                                <td className={styles.td}>
+                                                    <button type="button" onClick={() => handleRemoveItem(index)} className={styles['remove-btn']} title="Remove item">&times;</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
 
@@ -205,66 +444,43 @@ const AdminOrderCreatePage: React.FC = () => {
                             <label className={styles.label}>Payment Method (Default: Cash)</label>
                             <div className={styles['radio-group']}>
                                 <label className={styles['radio-label']}>
-                                    <input
-                                        type="radio"
-                                        className={styles['radio-input']}
-                                        checked={manualOrder.paymentStatus === 'done'}
-                                        onChange={() => setManualOrder({ ...manualOrder, paymentStatus: 'done', paymentTerms: 0 })}
-                                    />
-                                    Paid Immediately
+                                    <input type="radio" className={styles['radio-input']} checked={paymentStatus === 'done'} onChange={() => { setPaymentStatus('done'); setPaymentTerms(0); }} /> Paid Immediately
                                 </label>
                                 <label className={styles['radio-label']}>
-                                    <input
-                                        type="radio"
-                                        className={styles['radio-input']}
-                                        checked={manualOrder.paymentStatus === 'pending'}
-                                        onChange={() => setManualOrder({ ...manualOrder, paymentStatus: 'pending' })}
-                                    />
-                                    Pending (Credit Terms)
+                                    <input type="radio" className={styles['radio-input']} checked={paymentStatus === 'pending'} onChange={() => setPaymentStatus('pending')} /> Pending (Credit Terms)
                                 </label>
                             </div>
                         </div>
 
-                        {manualOrder.paymentStatus === 'pending' && (
+                        {paymentStatus === 'pending' && (
                             <div className={styles['warning-box']}>
                                 <label className={styles['warning-label']}>Payment Terms (Days)</label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="0"
-                                    max="365"
-                                    placeholder="e.g. 30"
-                                    className={styles.input}
-                                    value={manualOrder.paymentTerms}
-                                    onChange={(e) => setManualOrder({ ...manualOrder, paymentTerms: Number(e.target.value) })}
-                                />
-                                <span className={styles['warning-text']}>
-                                    Order will be marked unpaid. Payment expected in {manualOrder.paymentTerms} days.
-                                </span>
+                                <input type="number" required min="0" max="365" placeholder="e.g. 30" className={styles.input} value={paymentTerms} onChange={(e) => setPaymentTerms(Number(e.target.value))} />
+                                <span className={styles['warning-text']}>Order will be marked unpaid. Payment expected in {paymentTerms} days.</span>
                             </div>
                         )}
 
-                        {/* Summary Total */}
-                        {selectedVariantData && (
-                            <div className={styles['summary-box']}>
-                                <span className={styles['summary-label']}>Total Amount to Bill:</span>
-                                <h3 className={styles['summary-value']}>
-                                    ₹{((selectedVariantData.salesPrice + (selectedVariantData.salesPrice * (selectedVariantData.salesTax / 100))) * manualOrder.qty).toFixed(2)}
-                                </h3>
-                            </div>
-                        )}
+                        <div className={styles['summary-box']}>
+                            <span className={styles['summary-label']}>Total Amount to Bill:</span>
+                            <h3 className={styles['summary-value']}>₹{grandTotal.toFixed(2)}</h3>
+                        </div>
 
-                        <button
-                            type="submit"
-                            className={`${styles.btn} ${styles['btn-primary']}`}
-                            disabled={isSubmitting}
-                        >
+                        <button type="submit" className={`${styles.btn} ${styles['btn-primary']}`} disabled={isSubmitting || orderItems.length === 0}>
                             {isSubmitting ? 'Processing Order...' : 'Generate Manual Order'}
                         </button>
 
                     </form>
                 </div>
             </div>
+
+            <ContactFormDialog 
+                isOpen={isCustomerDialogOpen}
+                onClose={() => setIsCustomerDialogOpen(false)}
+                onSubmit={handleCreateCustomerSubmit}
+                isProcessing={isCreatingCustomer}
+                title="Create New Customer"
+            />
+            
         </main>
     );
 };

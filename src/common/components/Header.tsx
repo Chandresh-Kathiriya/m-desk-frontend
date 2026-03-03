@@ -52,10 +52,10 @@ const Header: React.FC = () => {
         <Link to="/" className={styles['header__brand']} style={{ textDecoration: 'none' }}>
           <div className={styles['header__brand-icon']} style={{ display: 'flex', alignItems: 'center' }}>
             {/* Swapped inline styles for the responsive CSS class */}
-            <img 
-              src="/logo_big.png" 
-              alt="MDesk Logo" 
-              className={styles['header__brand-img']} 
+            <img
+              src="/logo_big.png"
+              alt="MDesk Logo"
+              className={styles['header__brand-img']}
             />
           </div>
         </Link>
@@ -97,11 +97,20 @@ const Header: React.FC = () => {
 
                 <li className={`${styles['header__nav-item']} ${styles['header__dropdown-wrapper']}`}>
                   <div className={styles['header__nav-link']}>
-                    <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    <svg
+                      className={styles['header__nav-icon']}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="4" width="18" height="6" rx="2"></rect>
+                      <rect x="3" y="14" width="18" height="6" rx="2"></rect>
                     </svg>
                     {text.products || 'Products'}
-                    <svg className={styles['header__chevron']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{marginLeft: '4px'}}>
+                    <svg className={styles['header__chevron']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{ marginLeft: '-5px' }}>
                       <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                   </div>
@@ -112,40 +121,54 @@ const Header: React.FC = () => {
                   </ul>
                 </li>
 
-                <li className={styles['header__nav-item']}>
-                  <NavLink to="/admin/orders" className={getActiveClass}>
+                <li className={`${styles['header__nav-item']} ${styles['header__dropdown-wrapper']}`}>
+                  <div className={styles['header__nav-link']}>
                     <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                       <path d="M3.29 7 12 12l8.71-5"></path><path d="M12 22V12"></path>
                     </svg>
                     {text.orders || 'Orders'}
-                  </NavLink>
+                    <svg className={styles['header__chevron']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{ marginLeft: '-5px' }}>
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                  <ul className={styles['header__dropdown-menu']}>
+                    <li className={styles['header__nav-item']}>
+                      <NavLink to="/admin/orders" className={getActiveClass}>
+                        {text.orders || 'Orders'}
+                      </NavLink>
+                    </li>
+                    <li className={styles['header__nav-item']}>
+                      <NavLink to="/admin/invoices" className={getActiveClass}>
+                        {text.invoices || 'Invoices'}
+                      </NavLink>
+                    </li>
+                  </ul>
                 </li>
 
                 <li className={`${styles['header__nav-item']} ${styles['header__dropdown-wrapper']}`}>
                   <div className={styles['header__nav-link']}>
                     <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-                      <path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path><path d="M8 9h4"></path>
+                      <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                     </svg>
-                    {text.invoices || 'Invoices'}
-                    <svg className={styles['header__chevron']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{marginLeft: '4px'}}>
+                    {text.purchases || 'Purchases'}
+                    <svg className={styles['header__chevron']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16" style={{ marginLeft: '-5px' }}>
                       <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                   </div>
                   <ul className={styles['header__dropdown-menu']}>
-                    <li><NavLink to="/admin/invoices" className={getActiveClass}>{text.invoices || 'Invoices'}</NavLink></li>
-                    <li><NavLink to="/admin/bills" className={getActiveClass}>{text.bills || 'Bills'}</NavLink></li>
-                  </ul>
-                </li>
+                    <li className={styles['header__nav-item']}>
+                      <NavLink to="/admin/purchases" className={getActiveClass}>
+                        {text.purchases || 'Purchases'}
+                      </NavLink>
+                    </li>
 
-                <li className={styles['header__nav-item']}>
-                  <NavLink to="/admin/purchases" className={getActiveClass}>
-                    <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                    </svg>
-                    {text.purchases || 'Purchases'}
-                  </NavLink>
+                    <li className={styles['header__nav-item']}>
+                      <NavLink to="/admin/bills" className={getActiveClass}>
+                        {text.bills || 'Bills'}
+                      </NavLink>
+                    </li>
+                  </ul>
                 </li>
 
                 <li className={styles['header__nav-item']}>
@@ -166,6 +189,44 @@ const Header: React.FC = () => {
                   </NavLink>
                 </li>
 
+                <li className={styles['header__nav-item']}>
+                  <NavLink to="/admin/reports" className={getActiveClass}>
+                    <svg
+                      className={styles['header__nav-icon']}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="12" y1="20" x2="12" y2="10"></line>
+                      <line x1="18" y1="20" x2="18" y2="4"></line>
+                      <line x1="6" y1="20" x2="6" y2="16"></line>
+                    </svg>
+                    {text.reports || 'Reports'}
+                  </NavLink>
+                </li>
+
+                <li className={styles['header__nav-item']}>
+                  <NavLink to="/admin/settings" className={getActiveClass}>
+                    <svg
+                      className={styles['header__nav-icon']}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06 a2 2 0 1 1-2.83 2.83l-.06-.06 a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82V22 a2 2 0 1 1-4 0v-.18 a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06 a2 2 0 1 1-2.83-2.83l.06-.06 a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33H2 a2 2 0 1 1 0-4h.18 a1.65 1.65 0 0 0 1.82-.33 1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06 a2 2 0 1 1 2.83-2.83l.06.06 a1.65 1.65 0 0 0 1.82.33h0 a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1.82V2 a2 2 0 1 1 4 0v.18 a1.65 1.65 0 0 0 .33 1.82 1.65 1.65 0 0 0 1 .6h0 a1.65 1.65 0 0 0 1.82-.33l.06-.06 a2 2 0 1 1 2.83 2.83l-.06.06 a1.65 1.65 0 0 0-.33 1.82v0 c0 .39.14.77.33 1.1 .2.33.5.57.87.7H22 a2 2 0 1 1 0 4h-.18 c-.37.13-.67.37-.87.7 -.19.33-.33.71-.33 1.1z">
+                      </path>
+                    </svg>
+                    {text.settings || 'Settings'}
+                  </NavLink>
+                </li>
+
                 <li className={`${styles['header__nav-item']} ${styles['header__user-profile']}`}>
                   <div className={styles['header__profile-info']}>
                     <span className={styles['header__badge']}>Admin</span>
@@ -177,7 +238,7 @@ const Header: React.FC = () => {
                 </li>
               </>
             ) : isUserAuth ? (
-                <>
+              <>
                 <li className={styles['header__nav-item']}>
                   <NavLink to="/" end className={getActiveClass}>
                     <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
