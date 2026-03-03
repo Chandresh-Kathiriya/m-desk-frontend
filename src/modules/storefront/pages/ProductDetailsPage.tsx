@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { getStorefrontProductDetails, listSimilarProducts } from '../../../store/actions/storefront/productActions';
 import { addToCart } from '../../../store/actions/user/cartActions';
 import { listMyOrders } from '../../../store/actions/user/orderActions';
@@ -17,6 +17,7 @@ const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<any>();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // --- REDUX STATES ---
   const userAuth = useSelector((state: RootState) => state.userAuth || {});
@@ -195,11 +196,15 @@ const ProductDetailsPage: React.FC = () => {
 
   const addToCartHandler = () => {
     if (currentVariant) {
-      dispatch(addToCart(product, currentVariant, qty));
-      setAddedToCart(true);
-      setTimeout(() => {
-        setAddedToCart(false);
-      }, 2500);
+      // PASS navigate AS THE 4TH ARGUMENT HERE:
+      dispatch(addToCart(product, currentVariant, qty, navigate)); 
+      
+      // Note: If you are using the visual "Added to Cart ✅" trick we built earlier, 
+      // you might want to wrap it in a check so it doesn't turn green if they aren't logged in.
+      if (userInfo && userInfo.token) {
+          setAddedToCart(true);
+          setTimeout(() => setAddedToCart(false), 2500);
+      }
     }
   };
 

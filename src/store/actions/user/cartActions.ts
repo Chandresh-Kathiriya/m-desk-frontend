@@ -1,37 +1,49 @@
 import axios from 'axios';
 
 export const fetchUserCart = () => async (dispatch: any, getState: any) => {
-    try {
-      dispatch({ type: 'CART_SYNC_REQUEST' });
-  
-      // Safely grab the user info
-      const state = getState();
-      const userInfo = state.userAuth?.userInfo; // Adjust "userAuth" if your login state is named differently!
-  
-      if (!userInfo || !userInfo.token) return; 
-  
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.get('/api/cart', config);
-  
-      dispatch({
-        type: 'CART_SYNC_SUCCESS',
-        payload: data.items || [], 
-      });
-    } catch (error: any) {
-      dispatch({ type: 'CART_SYNC_FAIL', payload: error.message });
-    }
-  };
-  
-  // --- ADD TO CART ---
-export const addToCart = (product: any, variant: any, qty: number) => async (dispatch: any, getState: any) => {
+  try {
+    dispatch({ type: 'CART_SYNC_REQUEST' });
+
+    // Safely grab the user info
+    const state = getState();
+    const userInfo = state.userAuth?.userInfo; // Adjust "userAuth" if your login state is named differently!
+
+    if (!userInfo || !userInfo.token) return;
+
+    const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+    const { data } = await axios.get('/api/cart', config);
+
+    dispatch({
+      type: 'CART_SYNC_SUCCESS',
+      payload: data.items || [],
+    });
+  } catch (error: any) {
+    dispatch({ type: 'CART_SYNC_FAIL', payload: error.message });
+  }
+};
+
+// --- ADD TO CART ---
+export const addToCart = (product: any, variant: any, qty: number, navigate?: any) => async (dispatch: any, getState: any) => {
   try {
     dispatch({ type: 'CART_SYNC_REQUEST' });
 
     const state = getState();
     const userInfo = state.userAuth?.userInfo;
 
+    // --- NEW: THE INTERCEPT ---
     if (!userInfo || !userInfo.token) {
-      alert("Please log in to add items to your cart!");
+      
+      // 1. Save the exact item data they wanted to add to temporary storage
+      sessionStorage.setItem('pendingCartItem', JSON.stringify({ product, variant, qty }));
+
+      if (navigate) {
+        // 2. Redirect to login, but keep the invisible message
+        navigate(`/login?redirect=/product/${product._id}`, { 
+            state: { message: "Please log in first to add products to your cart." } 
+        });
+      } else {
+        window.location.href = `/login?redirect=/product/${product._id}`;
+      }
       return; 
     }
 
@@ -40,7 +52,6 @@ export const addToCart = (product: any, variant: any, qty: number) => async (dis
     const finalMrp = price + (price * (tax / 100));
 
     const colorImage = product.images?.find((img: any) => img.color?.toLowerCase() === variant.color.toLowerCase())?.url;
-    // FIXED: Use a real placeholder URL if no image exists, because Mongoose will crash if this is an empty string!
     const fallbackImage = product.images?.length > 0 ? product.images[0].url : 'https://via.placeholder.com/150';
 
     const cartItemData = {
@@ -63,42 +74,41 @@ export const addToCart = (product: any, variant: any, qty: number) => async (dis
       payload: data.items,
     });
   } catch (error: any) {
-    // --- CAPTURE THE REAL BACKEND ERROR ---
     console.error("❌ BACKEND REJECTED THE REQUEST:", error.response?.data || error.message);
     dispatch({ type: 'CART_SYNC_FAIL', payload: error.response?.data?.message || error.message });
   }
 };
-  
-  // --- REMOVE FROM CART ---
-  export const removeFromCart = (sku: string) => async (dispatch: any, getState: any) => {
-    try {
-      const state = getState();
-      const userInfo = state.userAuth?.userInfo;
-      
-      if (!userInfo || !userInfo.token) return;
-  
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const { data } = await axios.delete(`/api/cart/${sku}`, config);
-  
-      dispatch({
-        type: 'CART_SYNC_SUCCESS',
-        payload: data.items,
-      });
-    } catch (error: any) {
-      console.error("Failed to remove item", error);
-    }
-  };
 
-  // --- UPDATE CART QUANTITY ---
+// --- REMOVE FROM CART ---
+export const removeFromCart = (sku: string) => async (dispatch: any, getState: any) => {
+  try {
+    const state = getState();
+    const userInfo = state.userAuth?.userInfo;
+
+    if (!userInfo || !userInfo.token) return;
+
+    const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+    const { data } = await axios.delete(`/api/cart/${sku}`, config);
+
+    dispatch({
+      type: 'CART_SYNC_SUCCESS',
+      payload: data.items,
+    });
+  } catch (error: any) {
+    console.error("Failed to remove item", error);
+  }
+};
+
+// --- UPDATE CART QUANTITY ---
 export const updateCartQty = (sku: string, qty: number) => async (dispatch: any, getState: any) => {
   try {
     const state = getState();
     const userInfo = state.userAuth?.userInfo;
-    
+
     if (!userInfo || !userInfo.token) return;
 
     const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-    
+
     // Call the new PUT route we just created!
     const { data } = await axios.put(`/api/cart/${sku}`, { qty }, config);
 
@@ -133,19 +143,19 @@ export const saveShippingAddress = (data: { address: string; city: string; posta
 
 export const clearUserCart = () => async (dispatch: any, getState: any) => {
   try {
-      const state = getState();
-      const userInfo = state.userAuth?.userInfo;
-      
-      if (!userInfo || !userInfo.token) return;
+    const state = getState();
+    const userInfo = state.userAuth?.userInfo;
 
-      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      
-      // Clear cart in the backend database
-      await axios.delete('/api/cart', config);
+    if (!userInfo || !userInfo.token) return;
 
-      // Clear cart in the Redux state (matches your existing CART_CLEAR case)
-      dispatch({ type: 'CART_CLEAR' });
+    const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+
+    // Clear cart in the backend database
+    await axios.delete('/api/cart', config);
+
+    // Clear cart in the Redux state (matches your existing CART_CLEAR case)
+    dispatch({ type: 'CART_CLEAR' });
   } catch (error: any) {
-      console.error("Failed to clear cart", error);
+    console.error("Failed to clear cart", error);
   }
 };

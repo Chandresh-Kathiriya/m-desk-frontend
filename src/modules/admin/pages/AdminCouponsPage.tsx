@@ -189,7 +189,16 @@ const AdminCouponsPage: React.FC = () => {
                             <form onSubmit={submitOfferHandler}>
                                 <div className={styles['form-group']}>
                                     <label className={styles.label}>Offer Name (e.g. Summer Sale)</label>
-                                    <input type="text" className={styles.input} value={offerName} onChange={(e) => setOfferName(e.target.value)} required />
+                                    <input
+                                        type="text"
+                                        className={styles.input}
+                                        value={offerName}
+                                        onChange={(e) => {
+                                            const sanitizedValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                            setOfferName(sanitizedValue);
+                                        }}
+                                        required
+                                    />
                                 </div>
 
                                 <div className={styles['form-row']}>
@@ -249,7 +258,17 @@ const AdminCouponsPage: React.FC = () => {
                             <form onSubmit={submitCouponHandler}>
                                 <div className={styles['form-group']}>
                                     <label className={styles.label}>Coupon Code</label>
-                                    <input type="text" className={styles.input} placeholder="e.g. SUMMER50" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} required />
+                                    <input
+                                        type="text"
+                                        className={styles.input}
+                                        placeholder="e.g. SUMMER50"
+                                        value={couponCode}
+                                        onChange={(e) => {
+                                            const sanitizedValue = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                            setCouponCode(sanitizedValue);
+                                        }}
+                                        required
+                                    />
                                 </div>
 
                                 <div className={styles['form-row']}>
