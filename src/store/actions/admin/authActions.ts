@@ -4,14 +4,15 @@ import {
   ADMIN_REGISTER_REQUEST, ADMIN_REGISTER_SUCCESS, ADMIN_REGISTER_FAIL
 } from '../../constants/admin/authConstants';
 
-export const loginAdmin = (email: string, password: string) => async (dispatch: any) => {
+export const loginAdmin = (loginId: string, password: string) => async (dispatch: any) => {
   try {
     dispatch({ type: ADMIN_LOGIN_REQUEST });
 
     const config = { headers: { 'Content-Type': 'application/json' } };
-    const { data } = await axios.post('/api/auth/login', { email, password }, config);
+    
+    // --- CHANGED: Send loginId to backend ---
+    const { data } = await axios.post('/api/auth/login', { loginId, password }, config);
 
-    // Optional: Add a check here to ensure data.user.role === 'admin' before dispatching success
     dispatch({ type: ADMIN_LOGIN_SUCCESS, payload: data });
     localStorage.setItem('adminInfo', JSON.stringify(data));
   } catch (error: any) {

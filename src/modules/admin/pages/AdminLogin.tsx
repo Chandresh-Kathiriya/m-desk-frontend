@@ -8,7 +8,8 @@ import { textSchema } from '../../../schemas/text/schema';
 import styles from '../../../schemas/css/AdminLogin.module.css';
 
 const AdminLogin: React.FC = () => {
-  const [email, setEmail] = useState('');
+  // --- NEW: Using 'loginId' instead of 'email' ---
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   
   const dispatch = useDispatch<any>();
@@ -20,20 +21,18 @@ const AdminLogin: React.FC = () => {
   const { loading, error, isAuthenticated } = adminAuth;
 
   useEffect(() => {
-    // Redirect to a specific admin dashboard upon successful login
     if (isAuthenticated) navigate('/admin/dashboard');
   }, [isAuthenticated, navigate]);
 
   const submitHandler = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginAdmin(email, password));
+    dispatch(loginAdmin(loginId, password));
   };
 
   return (
     <main className={styles['page-wrapper']}>
       <div className={styles['login-box']}>
         
-        {/* Admin Shield Logo - Visual cue for backend access */}
         <div className={styles['admin-logo']}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -58,14 +57,14 @@ const AdminLogin: React.FC = () => {
         
         <form onSubmit={submitHandler}>
           <div className={styles['form-group']}>
-            <label htmlFor="admin-email" className={styles.label}>{text.emailLabel}</label>
+            <label htmlFor="admin-loginId" className={styles.label}>Email or Mobile Number</label>
             <input 
-              id="admin-email"
-              type="email" 
+              id="admin-loginId"
+              type="text" 
               className={styles.input}
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              placeholder="admin@example.com"
+              value={loginId} 
+              onChange={(e) => setLoginId(e.target.value)} 
+              placeholder="admin@example.com or 9876543210"
               required 
             />
           </div>

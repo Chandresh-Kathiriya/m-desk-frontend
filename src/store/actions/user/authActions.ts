@@ -5,12 +5,14 @@ import {
 } from '../../constants/user/authConstants';
 
 // We assume your base API URL is configured or proxy is set up in vite.config.ts
-export const loginUser = (email: string, password: string) => async (dispatch: any) => {
+export const loginUser = (loginId: string, password: string) => async (dispatch: any) => {
   try {
     dispatch({ type: USER_LOGIN_REQUEST });
 
     const config = { headers: { 'Content-Type': 'application/json' } };
-    const { data } = await axios.post('/api/auth/login', { email, password }, config);
+    
+    // --- CHANGED: Send loginId to backend ---
+    const { data } = await axios.post('/api/auth/login', { loginId, password }, config);
 
     dispatch({ type: USER_LOGIN_SUCCESS, payload: data });
     localStorage.setItem('userInfo', JSON.stringify(data));

@@ -10,54 +10,45 @@ import { addToCart } from '../../../store/actions/user/cartActions';
 
 const UserLogin: React.FC = () => {
   const location = useLocation();
-    const navigate = useNavigate();
-    const dispatch = useDispatch<any>();
+  const navigate = useNavigate();
+  const dispatch = useDispatch<any>();
 
-    // Redux State for Auth
-    const userAuth = useSelector((state: RootState) => state.userAuth || {});
-    const { userInfo } = userAuth as any;
+  // Redux State for Auth
+  const userAuth = useSelector((state: RootState) => state.userAuth || {});
+  const { userInfo, loading, error, isAuthenticated } = userAuth as any;
 
-    const alertMessage = location.state?.message; 
-    const searchParams = new URLSearchParams(location.search);
-    const redirectUrl = searchParams.get('redirect') || '/';
+  const alertMessage = location.state?.message; 
+  const searchParams = new URLSearchParams(location.search);
+  const redirectUrl = searchParams.get('redirect') || '/';
 
-    // --- NEW: AUTO-ADD TO CART ON SUCCESSFUL LOGIN ---
-    useEffect(() => {
-        const processLoginSuccess = async () => {
-            if (userInfo && userInfo.token) {
-                // 1. Check if there is an item waiting in storage
-                const pendingItemStr = sessionStorage.getItem('pendingCartItem');
+  // --- AUTO-ADD TO CART ON SUCCESSFUL LOGIN ---
+  useEffect(() => {
+      const processLoginSuccess = async () => {
+          if (userInfo && userInfo.token) {
+              const pendingItemStr = sessionStorage.getItem('pendingCartItem');
 
-                if (pendingItemStr) {
-                    try {
-                        const { product, variant, qty } = JSON.parse(pendingItemStr);
-                        
-                        // 2. Clear storage immediately so we don't accidentally add it twice
-                        sessionStorage.removeItem('pendingCartItem');
-                        
-                        // 3. AWAIT the dispatch! This runs the cart action automatically using their new auth token.
-                        await dispatch(addToCart(product, variant, qty));
-                        
-                    } catch (err) {
-                        console.error("Failed to auto-add item after login", err);
-                        sessionStorage.removeItem('pendingCartItem');
-                    }
-                }
-                
-                // 4. Finally, redirect them back to the product page!
-                navigate(redirectUrl);
-            }
-        };
+              if (pendingItemStr) {
+                  try {
+                      const { product, variant, qty } = JSON.parse(pendingItemStr);
+                      sessionStorage.removeItem('pendingCartItem');
+                      await dispatch(addToCart(product, variant, qty));
+                  } catch (err) {
+                      console.error("Failed to auto-add item after login", err);
+                      sessionStorage.removeItem('pendingCartItem');
+                  }
+              }
+              navigate(redirectUrl);
+          }
+      };
 
-        processLoginSuccess();
-    }, [userInfo, navigate, dispatch, redirectUrl, alertMessage]);
+      processLoginSuccess();
+  }, [userInfo, navigate, dispatch, redirectUrl, alertMessage]);
 
-  const [email, setEmail] = useState('');
+  // --- NEW: Using 'loginId' instead of 'email' to support both Email and Mobile ---
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
 
   const text = textSchema.en.auth;
-
-  const { loading, error, isAuthenticated } = userAuth;
 
   useEffect(() => {
     if (isAuthenticated) navigate('/');
@@ -65,7 +56,8 @@ const UserLogin: React.FC = () => {
 
   const submitHandler = (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(loginUser(email, password));
+    // Dispatching loginId - backend will figure out if it's an email or mobile
+    dispatch(loginUser(loginId, password));
   };
 
   return (
@@ -85,7 +77,6 @@ const UserLogin: React.FC = () => {
           </div>
         )}
 
-        {/* Brand Logo Placeholder - Adds a premium anchor point */}
         <div className={styles['brand-logo']}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -110,14 +101,15 @@ const UserLogin: React.FC = () => {
 
         <form onSubmit={submitHandler}>
           <div className={styles['form-group']}>
-            <label htmlFor="email" className={styles.label}>{text.emailLabel}</label>
+            <label htmlFor="loginId" className={styles.label}>Email or Mobile Number</label>
+            {/* Changed type to "text" so it accepts both formats */}
             <input
-              id="email"
-              type="email"
+              id="loginId"
+              type="text"
               className={styles.input}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              placeholder="name@example.com or 9876543210"
               required
             />
           </div>
