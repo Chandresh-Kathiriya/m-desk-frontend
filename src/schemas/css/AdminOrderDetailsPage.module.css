@@ -162,7 +162,7 @@
     height: 64px;
     border-radius: var(--radius-md);
     border: 1px solid var(--color-neutral-200);
-    object-fit: cover;
+    object-fit: contain;
     flex-shrink: 0;
     background-color: var(--color-neutral-50);
 }

@@ -285,7 +285,7 @@
 .image-preview {
     width: 100%;
     height: 110px;
-    object-fit: cover;
+    object-fit: contain;
     border-bottom: 1px solid var(--color-neutral-100);
 }
 
@@ -306,7 +306,7 @@
 .uploaded-img {
     width: 100px;
     height: 100px;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: var(--radius-md);
     border: 2px solid var(--color-success-600);
 }
