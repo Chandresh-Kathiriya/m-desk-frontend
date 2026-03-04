@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { showErrorAlert, showSuccessAlert, showToast } from '../../../common/utils/alertUtils';
 import { RootState } from '../../../store/reducers';
-import { listUsers } from '../../../store/actions/admin/userActions';
+import { listUsers, createUser } from '../../../store/actions/admin/userActions';
 import { listAdminProducts } from '../../../store/actions/admin/productActions';
 import { createManualOrder } from '../../../store/actions/admin/orderActions';
 import { ORDER_CREATE_MANUAL_RESET } from '../../../store/constants/admin/orderConstants';
+import { USER_CREATE_RESET } from '../../../store/constants/admin/userConstants';
 
-import ContactFormDialog from '../../../common/components/ContactFormDialog'; 
+import ContactFormDialog from '../../../common/components/ContactFormDialog';
 
 import styles from '../../../schemas/css/AdminOrderCreatePage.module.css';
 
@@ -16,12 +17,17 @@ const AdminOrderCreatePage: React.FC = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch<any>();
 
+    // Safely grab the token whether it's stored in adminAuth or userAuth
     const adminAuth = useSelector((state: RootState) => state.adminAuth || {});
     const userAuth = useSelector((state: RootState) => state.userAuth || {});
     const userInfo = (adminAuth as any).adminInfo || (userAuth as any).userInfo;
 
+    // --- REDUX STATES ---
     const userList = useSelector((state: RootState) => state.userList || {});
     const { users: usersList = [], loading: loadingUsers, error: errorUsers } = userList as any;
+
+    const userCreate = useSelector((state: RootState) => state.userCreate || {});
+    const { loading: isCreatingCustomer, success: successCreateUser, user: createdUser, error: errorCreateUser } = userCreate as any;
 
     const productList = useSelector((state: RootState) => state.productList || {});
     const { products: productsList = [], loading: loadingProducts, error: errorProducts } = productList as any;
@@ -31,7 +37,7 @@ const AdminOrderCreatePage: React.FC = () => {
 
     // --- OVERALL ORDER STATE ---
     const [selectedUser, setSelectedUser] = useState('');
-    const [paymentStatus, setPaymentStatus] = useState('done'); 
+    const [paymentStatus, setPaymentStatus] = useState('done');
     const [paymentTerms, setPaymentTerms] = useState(0);
     const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().split('T')[0]);
 
@@ -49,7 +55,6 @@ const AdminOrderCreatePage: React.FC = () => {
     const [orderItems, setOrderItems] = useState<any[]>([]);
 
     const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
-    const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
 
     useEffect(() => {
         if (!userInfo || !userInfo.token) {
@@ -66,7 +71,7 @@ const AdminOrderCreatePage: React.FC = () => {
             const user = usersList.find((u: any) => u._id === selectedUser);
             if (user && user.address) {
                 const defaultAddress = {
-                    address: user.address.address || '', 
+                    address: user.address.address || '',
                     city: user.address.city || '',
                     postalCode: user.address.pincode || '',
                     country: user.address.state || 'India'
@@ -82,17 +87,37 @@ const AdminOrderCreatePage: React.FC = () => {
         }
     }, [selectedUser, usersList, sameAsShipping]);
 
+    // --- HANDLE MANUAL ORDER CREATION RESULT ---
     useEffect(() => {
         if (success) {
-            alert("Manual order created successfully!");
+            showToast(`Manual order created successfully!`, 'success');
             dispatch({ type: ORDER_CREATE_MANUAL_RESET });
             navigate('/admin/orders');
         }
         if (errorCreate) {
-            alert(`Failed to create order: ${errorCreate}`);
+            showErrorAlert(`Failed to create order: ${errorCreate}`);
             dispatch({ type: ORDER_CREATE_MANUAL_RESET });
         }
     }, [success, errorCreate, dispatch, navigate]);
+
+    // --- HANDLE CUSTOMER CREATION RESULT ---
+    useEffect(() => {
+        if (successCreateUser) {
+            setIsCustomerDialogOpen(false);
+            showSuccessAlert('Customer Created Successfully!', 'Their default password is: ManualUser@123');
+            
+            // Re-fetch list and auto-select the new user
+            dispatch(listUsers());
+            if (createdUser && (createdUser.id || createdUser._id)) {
+                setSelectedUser(createdUser.id || createdUser._id);
+            }
+            dispatch({ type: USER_CREATE_RESET });
+        }
+        if (errorCreateUser) {
+            showErrorAlert('Failed to create customer', errorCreateUser);
+            dispatch({ type: USER_CREATE_RESET });
+        }
+    }, [successCreateUser, errorCreateUser, createdUser, dispatch]);
 
     const selectedProductData = productsList.find((p: any) => p._id === currentProduct);
     const selectedVariantData = selectedProductData?.variants?.find((v: any) => v.sku === currentVariantSku);
@@ -100,24 +125,28 @@ const AdminOrderCreatePage: React.FC = () => {
     // --- ADD ITEM TO CART LOGIC ---
     const handleAddItem = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (!currentProduct || !currentVariantSku || currentQty < 1) return alert("Please select a product, variant, and valid quantity.");
-        if (selectedVariantData.stock < currentQty) return alert(`Cannot add more than available stock (${selectedVariantData.stock}).`);
+        if (!currentProduct || !currentVariantSku || currentQty < 1) {
+            return showToast("Please select a product, variant, and valid quantity.", "error");
+        }
+
+        if (selectedVariantData.stock < currentQty) {
+            return showToast(`Cannot add more than available stock (${selectedVariantData.stock}).`, "error");
+        }
 
         const basePrice = Number(selectedVariantData.salesPrice) || 0;
         const taxPercent = Number(selectedVariantData.salesTax) || 0;
         const unitPriceWithTax = basePrice + (basePrice * (taxPercent / 100));
-        
+
         const existingIndex = orderItems.findIndex(item => item.sku === currentVariantSku);
 
         if (existingIndex >= 0) {
             const updatedItems = [...orderItems];
             const newQty = updatedItems[existingIndex].qty + currentQty;
-            
-            // Check if adding more exceeds total stock
+
             if (newQty > updatedItems[existingIndex].maxStock) {
-                return alert(`Cannot add more. Maximum stock available is ${updatedItems[existingIndex].maxStock}.`);
+                return showToast(`Cannot add more. Maximum stock available is ${updatedItems[existingIndex].maxStock}.`, 'error');
             }
-            
+
             updatedItems[existingIndex].qty = newQty;
             setOrderItems(updatedItems);
         } else {
@@ -126,18 +155,18 @@ const AdminOrderCreatePage: React.FC = () => {
                 name: selectedProductData.productName,
                 image: selectedProductData.images?.[0]?.url || '',
                 price: basePrice,
-                unitPriceWithTax: unitPriceWithTax, 
+                unitPriceWithTax: unitPriceWithTax,
                 qty: currentQty,
                 sku: selectedVariantData.sku,
                 color: selectedVariantData.color,
                 size: selectedVariantData.size,
-                maxStock: selectedVariantData.stock // <-- Save stock limit for the table
+                maxStock: selectedVariantData.stock
             }]);
         }
         setCurrentProduct(''); setCurrentVariantSku(''); setCurrentQty(1);
     };
 
-    // --- NEW: IN-TABLE QUANTITY CONTROLS ---
+    // --- IN-TABLE QUANTITY CONTROLS ---
     const handleIncreaseQty = (index: number) => {
         const updatedItems = [...orderItems];
         if (updatedItems[index].qty < updatedItems[index].maxStock) {
@@ -162,13 +191,21 @@ const AdminOrderCreatePage: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!selectedUser) return alert("Please select a customer.");
-        if (orderItems.length === 0) return alert("Please add at least one product to the order.");
-        if (!invoiceDate) return alert("Please select an invoice date.");
+
+        if (!selectedUser) {
+            return showToast("Please select a customer.", "error");
+        }
+
+        if (orderItems.length === 0) {
+            return showToast("Please add at least one product to the order.", "error");
+        }
+
+        if (!invoiceDate) {
+            return showToast("Please select an invoice date.", "error");
+        }
 
         if (!shippingAddress.address || !shippingAddress.city) {
-            return alert("Please provide a valid Shipping Address and City.");
+            return showToast("Please provide a valid Shipping Address and City.", "error");
         }
 
         const isPaid = paymentStatus === 'done';
@@ -177,7 +214,7 @@ const AdminOrderCreatePage: React.FC = () => {
         const orderPayload = {
             user: selectedUser,
             invoiceDate,
-            createdBy: adminId, 
+            createdBy: adminId,
             orderItems: orderItems.map(item => ({
                 product: item.product, name: item.name, image: item.image, price: item.price,
                 qty: item.qty, sku: item.sku, color: item.color, size: item.size
@@ -206,23 +243,18 @@ const AdminOrderCreatePage: React.FC = () => {
         }
     };
 
-    const handleCreateCustomerSubmit = async (formData: any) => {
-        try {
-            setIsCreatingCustomer(true);
-            const payload = {
-                name: formData.name, email: formData.email, mobile: formData.mobile, password: 'ManualUser@123',
-                city: formData.address.city, state: formData.address.state, pincode: formData.address.pincode, role: 'customer'
-            };
-            const { data } = await axios.post('/api/auth/register', payload, { headers: { 'Content-Type': 'application/json' } });
-            dispatch(listUsers());
-            if (data?.user?.id) setSelectedUser(data.user.id);
-            setIsCustomerDialogOpen(false);
-            alert('Customer created successfully! Their default password is: ManualUser@123');
-        } catch (err: any) {
-            alert(`Failed to create customer: ${err.response?.data?.message || err.message}`);
-        } finally {
-            setIsCreatingCustomer(false);
-        }
+    const handleCreateCustomerSubmit = (formData: any) => {
+        const payload = {
+            name: formData.name, 
+            email: formData.email, 
+            mobile: formData.mobile, 
+            password: 'ManualUser@123',
+            city: formData.address.city, 
+            state: formData.address.state, 
+            pincode: formData.address.pincode, 
+            role: 'customer'
+        };
+        dispatch(createUser(payload));
     };
 
     const isPageLoading = loadingUsers || loadingProducts;
@@ -270,33 +302,33 @@ const AdminOrderCreatePage: React.FC = () => {
                                 <div className={styles['form-group']} style={{ flex: 2 }}>
                                     <label className={styles.label}>Street Address</label>
                                     <input type="text" required className={styles.input} placeholder="123 Main St, Apt 4B"
-                                        value={shippingAddress.address} onChange={e => setShippingAddress({...shippingAddress, address: e.target.value})} />
+                                        value={shippingAddress.address} onChange={e => setShippingAddress({ ...shippingAddress, address: e.target.value })} />
                                 </div>
                             </div>
                             <div className={styles['form-row']}>
                                 <div className={styles['form-group']} style={{ flex: 1 }}>
                                     <label className={styles.label}>City</label>
                                     <input type="text" required className={styles.input} placeholder="City"
-                                        value={shippingAddress.city} onChange={e => setShippingAddress({...shippingAddress, city: e.target.value})} />
+                                        value={shippingAddress.city} onChange={e => setShippingAddress({ ...shippingAddress, city: e.target.value })} />
                                 </div>
                                 <div className={styles['form-group']} style={{ flex: 1 }}>
                                     <label className={styles.label}>State / Country</label>
                                     <input type="text" required className={styles.input} placeholder="State / Country"
-                                        value={shippingAddress.country} onChange={e => setShippingAddress({...shippingAddress, country: e.target.value})} />
+                                        value={shippingAddress.country} onChange={e => setShippingAddress({ ...shippingAddress, country: e.target.value })} />
                                 </div>
                                 <div className={styles['form-group']} style={{ flex: 1 }}>
                                     <label className={styles.label}>Pincode / ZIP</label>
                                     <input type="text" required className={styles.input} placeholder="ZIP Code"
-                                        value={shippingAddress.postalCode} onChange={e => setShippingAddress({...shippingAddress, postalCode: e.target.value})} />
+                                        value={shippingAddress.postalCode} onChange={e => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })} />
                                 </div>
                             </div>
 
                             <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500 }}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={sameAsShipping} 
-                                        onChange={(e) => setSameAsShipping(e.target.checked)} 
+                                    <input
+                                        type="checkbox"
+                                        checked={sameAsShipping}
+                                        onChange={(e) => setSameAsShipping(e.target.checked)}
                                         style={{ width: '16px', height: '16px' }}
                                     />
                                     Billing/Invoice Address is the same as Shipping
@@ -310,24 +342,24 @@ const AdminOrderCreatePage: React.FC = () => {
                                         <div className={styles['form-group']} style={{ flex: 2 }}>
                                             <label className={styles.label}>Street Address</label>
                                             <input type="text" required={!sameAsShipping} className={styles.input} placeholder="123 Main St, Apt 4B"
-                                                value={billingAddress.address} onChange={e => setBillingAddress({...billingAddress, address: e.target.value})} />
+                                                value={billingAddress.address} onChange={e => setBillingAddress({ ...billingAddress, address: e.target.value })} />
                                         </div>
                                     </div>
                                     <div className={styles['form-row']}>
                                         <div className={styles['form-group']} style={{ flex: 1 }}>
                                             <label className={styles.label}>City</label>
                                             <input type="text" required={!sameAsShipping} className={styles.input} placeholder="City"
-                                                value={billingAddress.city} onChange={e => setBillingAddress({...billingAddress, city: e.target.value})} />
+                                                value={billingAddress.city} onChange={e => setBillingAddress({ ...billingAddress, city: e.target.value })} />
                                         </div>
                                         <div className={styles['form-group']} style={{ flex: 1 }}>
                                             <label className={styles.label}>State / Country</label>
                                             <input type="text" required={!sameAsShipping} className={styles.input} placeholder="State / Country"
-                                                value={billingAddress.country} onChange={e => setBillingAddress({...billingAddress, country: e.target.value})} />
+                                                value={billingAddress.country} onChange={e => setBillingAddress({ ...billingAddress, country: e.target.value })} />
                                         </div>
                                         <div className={styles['form-group']} style={{ flex: 1 }}>
                                             <label className={styles.label}>Pincode / ZIP</label>
                                             <input type="text" required={!sameAsShipping} className={styles.input} placeholder="ZIP Code"
-                                                value={billingAddress.postalCode} onChange={e => setBillingAddress({...billingAddress, postalCode: e.target.value})} />
+                                                value={billingAddress.postalCode} onChange={e => setBillingAddress({ ...billingAddress, postalCode: e.target.value })} />
                                         </div>
                                     </div>
                                 </div>
@@ -391,20 +423,19 @@ const AdminOrderCreatePage: React.FC = () => {
                                                         <span style={{ fontWeight: 500 }}>{item.name}</span>
                                                     </div>
                                                 </td>
-                                                <td className={styles.td}>{item.color} - {item.size}<br/><span style={{ fontSize: '12px', color: '#6b7280' }}>SKU: {item.sku}</span></td>
+                                                <td className={styles.td}>{item.color} - {item.size}<br /><span style={{ fontSize: '12px', color: '#6b7280' }}>SKU: {item.sku}</span></td>
                                                 <td className={styles.td}>₹{item.unitPriceWithTax.toFixed(2)}</td>
-                                                
-                                                {/* --- NEW: In-Table Quantity Controls --- */}
+
                                                 <td className={styles.td}>
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                                         <button
                                                             type="button"
                                                             onClick={() => handleDecreaseQty(index)}
                                                             disabled={item.qty <= 1}
-                                                            style={{ 
-                                                                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                                                border: '1px solid #cbd5e1', borderRadius: '4px', background: item.qty <= 1 ? '#f1f5f9' : '#fff', 
-                                                                cursor: item.qty <= 1 ? 'not-allowed' : 'pointer', fontSize: '16px', color: item.qty <= 1 ? '#94a3b8' : '#0f172a' 
+                                                            style={{
+                                                                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                border: '1px solid #cbd5e1', borderRadius: '4px', background: item.qty <= 1 ? '#f1f5f9' : '#fff',
+                                                                cursor: item.qty <= 1 ? 'not-allowed' : 'pointer', fontSize: '16px', color: item.qty <= 1 ? '#94a3b8' : '#0f172a'
                                                             }}
                                                         >
                                                             -
@@ -414,10 +445,10 @@ const AdminOrderCreatePage: React.FC = () => {
                                                             type="button"
                                                             onClick={() => handleIncreaseQty(index)}
                                                             disabled={item.qty >= item.maxStock}
-                                                            style={{ 
-                                                                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                                                border: '1px solid #cbd5e1', borderRadius: '4px', background: item.qty >= item.maxStock ? '#f1f5f9' : '#fff', 
-                                                                cursor: item.qty >= item.maxStock ? 'not-allowed' : 'pointer', fontSize: '16px', color: item.qty >= item.maxStock ? '#94a3b8' : '#0f172a' 
+                                                            style={{
+                                                                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                border: '1px solid #cbd5e1', borderRadius: '4px', background: item.qty >= item.maxStock ? '#f1f5f9' : '#fff',
+                                                                cursor: item.qty >= item.maxStock ? 'not-allowed' : 'pointer', fontSize: '16px', color: item.qty >= item.maxStock ? '#94a3b8' : '#0f172a'
                                                             }}
                                                             title={item.qty >= item.maxStock ? `Max stock is ${item.maxStock}` : ''}
                                                         >
@@ -444,10 +475,22 @@ const AdminOrderCreatePage: React.FC = () => {
                             <label className={styles.label}>Payment Method (Default: Cash)</label>
                             <div className={styles['radio-group']}>
                                 <label className={styles['radio-label']}>
-                                    <input type="radio" className={styles['radio-input']} checked={paymentStatus === 'done'} onChange={() => { setPaymentStatus('done'); setPaymentTerms(0); }} /> Paid Immediately
+                                    <input 
+                                        type="radio" 
+                                        className={styles['radio-input']}
+                                        checked={paymentStatus === 'done'} 
+                                        onChange={() => { setPaymentStatus('done'); setPaymentTerms(0); }} 
+                                    />
+                                    Paid Immediately
                                 </label>
                                 <label className={styles['radio-label']}>
-                                    <input type="radio" className={styles['radio-input']} checked={paymentStatus === 'pending'} onChange={() => setPaymentStatus('pending')} /> Pending (Credit Terms)
+                                    <input 
+                                        type="radio" 
+                                        className={styles['radio-input']}
+                                        checked={paymentStatus === 'pending'} 
+                                        onChange={() => setPaymentStatus('pending')} 
+                                    />
+                                    Pending (Credit Terms)
                                 </label>
                             </div>
                         </div>
@@ -473,14 +516,14 @@ const AdminOrderCreatePage: React.FC = () => {
                 </div>
             </div>
 
-            <ContactFormDialog 
+            <ContactFormDialog
                 isOpen={isCustomerDialogOpen}
                 onClose={() => setIsCustomerDialogOpen(false)}
                 onSubmit={handleCreateCustomerSubmit}
                 isProcessing={isCreatingCustomer}
                 title="Create New Customer"
             />
-            
+
         </main>
     );
 };

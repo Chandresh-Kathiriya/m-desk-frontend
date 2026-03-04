@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   listMasterData, createMasterData, updateMasterData, deleteMasterData, 
-  listMasterDataTabs, createMasterDataTab
+  listMasterDataTabs, createMasterDataTab, deleteMasterDataTab
 } from '../../../store/actions/admin/masterDataActions';
 import { 
-  MASTER_DATA_CREATE_RESET, MASTER_DATA_UPDATE_RESET, MASTER_DATA_TAB_CREATE_RESET 
+  MASTER_DATA_CREATE_RESET, MASTER_DATA_UPDATE_RESET, MASTER_DATA_TAB_CREATE_RESET, MASTER_DATA_TAB_DELETE_RESET 
 } from '../../../store/constants/admin/masterDataConstants';
 import { RootState } from '../../../store/reducers';
-import axios from 'axios'; // <-- Used for deleting the tab quickly
 import styles from '../../../schemas/css/MasterDataManagement.module.css';
+import { showConfirmDialog, showErrorAlert, showPromptDialog, showToast } from '../../../common/utils/alertUtils';
 
 const emptyRow = { name: '', description: '', hexCode: '#000000', code: '' };
 
@@ -30,6 +30,7 @@ const MasterDataManagement: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null); 
   const [formDataArray, setFormDataArray] = useState([{ ...emptyRow }]);
 
+  // --- REDUX STATES ---
   const adminAuth = useSelector((state: RootState) => state.adminAuth || {});
   const userInfo = (adminAuth as any).adminInfo || (adminAuth as any).userInfo;
 
@@ -39,15 +40,8 @@ const MasterDataManagement: React.FC = () => {
   const masterDataTabCreate = useSelector((state: RootState) => state.masterDataTabCreate || {} as any);
   const { loading: tabCreateLoading, success: tabCreateSuccess } = masterDataTabCreate;
 
-  const defaultTabIds = defaultTabs.map(t => t.id);
-  const customTabs = backendTabs
-    .filter((t: any) => !defaultTabIds.includes(t.tabId))
-    .map((t: any) => ({ id: t.tabId, label: t.label, isCustom: true }));
-
-  const displayTabs = [
-    ...defaultTabs.map(t => ({...t, isCustom: false})),
-    ...customTabs
-  ];
+  const masterDataTabDelete = useSelector((state: RootState) => state.masterDataTabDelete || {} as any);
+  const { success: successDeleteTab, error: errorDeleteTab } = masterDataTabDelete;
 
   const masterDataList = useSelector((state: RootState) => state.masterDataList || {} as any);
   const { loading, error } = masterDataList;
@@ -62,14 +56,39 @@ const MasterDataManagement: React.FC = () => {
   // Track delete errors locally for immediate feedback
   const [deleteErrorMsg, setDeleteErrorMsg] = useState<string | null>(null);
 
+  const defaultTabIds = defaultTabs.map(t => t.id);
+  const customTabs = backendTabs
+    .filter((t: any) => !defaultTabIds.includes(t.tabId))
+    .map((t: any) => ({ id: t.tabId, label: t.label, isCustom: true }));
+
+  const displayTabs = [
+    ...defaultTabs.map(t => ({...t, isCustom: false})),
+    ...customTabs
+  ];
+
   useEffect(() => { dispatch(listMasterDataTabs()); }, [dispatch]);
 
+  // Handle Tab Creation Success
   useEffect(() => {
     if (tabCreateSuccess) {
       dispatch(listMasterDataTabs());
       dispatch({ type: MASTER_DATA_TAB_CREATE_RESET });
     }
   }, [tabCreateSuccess, dispatch]);
+
+  // Handle Tab Deletion Success/Error
+  useEffect(() => {
+    if (successDeleteTab) {
+        showToast('Tab deleted successfully', 'success');
+        dispatch(listMasterDataTabs());
+        setActiveTab('brands'); // Reset to default
+        dispatch({ type: MASTER_DATA_TAB_DELETE_RESET });
+    }
+    if (errorDeleteTab) {
+        showErrorAlert('Deletion Failed', errorDeleteTab);
+        dispatch({ type: MASTER_DATA_TAB_DELETE_RESET });
+    }
+  }, [successDeleteTab, errorDeleteTab, dispatch]);
 
   useEffect(() => {
     dispatch(listMasterData(activeTab));
@@ -84,29 +103,35 @@ const MasterDataManagement: React.FC = () => {
     }
   }, [createSuccess, updateSuccess, dispatch]);
 
-  const handleAddCustomVariable = () => {
-    const variableName = window.prompt('Enter the name for the new variable (e.g., Materials):');
+  const handleAddCustomVariable = async () => {
+    const variableName = await showPromptDialog(
+      'Create New Variable', 
+      'Enter the name (e.g., Materials)'
+    );
+
     if (variableName && variableName.trim()) {
       const newId = variableName.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      
       if (displayTabs.find((t: any) => t.id === newId)) {
-        alert('This variable already exists!');
-        return;
+        return showToast('This variable already exists!', 'error');
       }
+      
       dispatch(createMasterDataTab({ tabId: newId, label: variableName.trim() }));
       setActiveTab(newId);
+      
+      showToast('Tab created successfully', 'success');
     }
   };
 
   const handleRemoveCustomTab = async (tabId: string) => {
-    if (window.confirm('Delete this entire custom tab?')) {
-        try {
-            const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-            await axios.delete(`/api/masterdata/admin/tabs/${tabId}`, config);
-            dispatch(listMasterDataTabs());
-            setActiveTab('brands'); // Reset to default
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to delete tab.');
-        }
+    const isConfirmed = await showConfirmDialog(
+        'Delete Custom Tab?',
+        'Are you sure you want to delete this entire custom tab? This cannot be undone.',
+        'Yes, delete it!'
+    );
+
+    if (isConfirmed) {
+        dispatch(deleteMasterDataTab(tabId));
     }
   };
 
@@ -137,13 +162,11 @@ const MasterDataManagement: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
         setDeleteErrorMsg(null);
-        // Dispatch the action. If the backend throws a 400 error (Linked to Product), it will trigger the catch block.
         await dispatch(deleteMasterData(activeTab, id)); 
         dispatch(listMasterData(activeTab));
       } catch (err: any) {
-        // Display the backend protection message
         setDeleteErrorMsg(err.response?.data?.message || err.message || 'Failed to delete record.');
-        window.scrollTo(0, 0); // Scroll up so admin sees the error
+        window.scrollTo(0, 0); 
       }
     }
   };
@@ -243,7 +266,6 @@ const MasterDataManagement: React.FC = () => {
                         <td className={styles['align-right']}>
                           <button className={`${styles.btn} ${styles['btn-outline-primary']}`} style={{ marginRight: '8px' }} onClick={() => handleOpenEdit(record)}>Edit</button>
                           
-                          {/* UPDATED TO USE NEW HANDLER */}
                           <button className={`${styles.btn} ${styles['btn-outline-danger']}`} onClick={() => handleDeleteRecord(record._id)}>Delete</button>
                           
                         </td>

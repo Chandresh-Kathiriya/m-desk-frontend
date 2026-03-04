@@ -6,6 +6,7 @@ import { getUserInvoiceDetails, downloadUserInvoice } from '../../../store/actio
 import { USER_INVOICE_DETAILS_RESET, USER_INVOICE_DOWNLOAD_RESET } from '../../../store/constants/user/invoiceConstants';
 
 import styles from '../../../schemas/css/InvoiceDetailsPage.module.css';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 const InvoiceDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -37,7 +38,7 @@ const InvoiceDetailsPage: React.FC = () => {
             dispatch({ type: USER_INVOICE_DOWNLOAD_RESET });
         }
         if (downloadError) {
-            alert(downloadError);
+            showErrorAlert('Download Failed', downloadError);
             dispatch({ type: USER_INVOICE_DOWNLOAD_RESET });
         }
     }, [downloadSuccess, downloadError, dispatch]);

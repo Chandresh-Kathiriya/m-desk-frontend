@@ -3,7 +3,11 @@ import {
   MASTER_DATA_CREATE_REQUEST, MASTER_DATA_CREATE_SUCCESS, MASTER_DATA_CREATE_FAIL, MASTER_DATA_CREATE_RESET,
   MASTER_DATA_UPDATE_REQUEST, MASTER_DATA_UPDATE_SUCCESS, MASTER_DATA_UPDATE_FAIL, MASTER_DATA_UPDATE_RESET,
   MASTER_DATA_TABS_REQUEST, MASTER_DATA_TABS_SUCCESS, MASTER_DATA_TABS_FAIL,
-  MASTER_DATA_TAB_CREATE_REQUEST, MASTER_DATA_TAB_CREATE_SUCCESS, MASTER_DATA_TAB_CREATE_FAIL, MASTER_DATA_TAB_CREATE_RESET
+  MASTER_DATA_TAB_CREATE_REQUEST, MASTER_DATA_TAB_CREATE_SUCCESS, MASTER_DATA_TAB_CREATE_FAIL, MASTER_DATA_TAB_CREATE_RESET,
+  MASTER_DATA_TAB_DELETE_RESET,
+  MASTER_DATA_TAB_DELETE_FAIL,
+  MASTER_DATA_TAB_DELETE_SUCCESS,
+  MASTER_DATA_TAB_DELETE_REQUEST
 } from '../../constants/admin/masterDataConstants';
 
 export const masterDataListReducer = (state = {}, action: any) => {
@@ -62,5 +66,20 @@ export const masterDataTabCreateReducer = (state = {}, action: any) => {
       case MASTER_DATA_TAB_CREATE_FAIL: return { loading: false, error: action.payload };
       case MASTER_DATA_TAB_CREATE_RESET: return {};
       default: return state;
+  }
+};
+
+export const masterDataTabDeleteReducer = (state = {}, action: any) => {
+  switch (action.type) {
+      case MASTER_DATA_TAB_DELETE_REQUEST:
+          return { loading: true };
+      case MASTER_DATA_TAB_DELETE_SUCCESS:
+          return { loading: false, success: true };
+      case MASTER_DATA_TAB_DELETE_FAIL:
+          return { loading: false, error: action.payload };
+      case MASTER_DATA_TAB_DELETE_RESET:
+          return {};
+      default:
+          return state;
   }
 };

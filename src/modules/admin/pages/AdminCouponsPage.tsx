@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../../store/reducers';
+import { showToast } from '../../../common/utils/alertUtils';
 
 // Redux Actions
 import {
@@ -97,7 +98,7 @@ const AdminCouponsPage: React.FC = () => {
             setDiscountValue('');
             setStartDate('');
             setEndDate('');
-            alert('Master Offer Created!');
+            showToast('Master Offer Created Successfully!', 'success');
             dispatch({ type: DISCOUNT_OFFER_CREATE_RESET });
             dispatch(listDiscountOffers());
         }
@@ -114,7 +115,7 @@ const AdminCouponsPage: React.FC = () => {
             setIsFirstTimeUserOnly(false);
             setUsageLimit(100);
             setCouponExpiration('');
-            alert('Coupon Code Generated!');
+            showToast('Coupon Code Generated!', 'success');
             dispatch({ type: DISCOUNT_COUPON_CREATE_RESET });
             dispatch(listDiscountCoupons());
         }

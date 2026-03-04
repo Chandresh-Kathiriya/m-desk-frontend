@@ -6,6 +6,7 @@ import { listVendorBills, downloadAdminBill } from '../../../store/actions/admin
 import { BILL_DOWNLOAD_RESET } from '../../../store/constants/admin/billConstants';
 
 import styles from '../../../schemas/css/AdminVendorBillsPage.module.css';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 const AdminVendorBillsPage: React.FC = () => {
     const dispatch = useDispatch<any>(); 
@@ -32,7 +33,7 @@ const AdminVendorBillsPage: React.FC = () => {
             dispatch({ type: BILL_DOWNLOAD_RESET });
         }
         if (downloadError) {
-            alert(downloadError);
+            showErrorAlert(downloadError);
             dispatch({ type: BILL_DOWNLOAD_RESET });
         }
     }, [downloadSuccess, downloadError, dispatch]);

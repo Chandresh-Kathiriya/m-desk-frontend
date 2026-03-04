@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 import { RootState } from '../../../store/reducers';
 import { listInvoices, downloadAdminInvoice } from '../../../store/actions/admin/invoiceActions';
 import { INVOICE_DOWNLOAD_RESET } from '../../../store/constants/admin/invoiceConstants';
@@ -30,7 +31,7 @@ const AdminInvoicesPage: React.FC = () => {
             dispatch({ type: INVOICE_DOWNLOAD_RESET });
         }
         if (downloadError) {
-            alert(downloadError);
+            showErrorAlert(downloadError);
             dispatch({ type: INVOICE_DOWNLOAD_RESET });
         }
     }, [downloadSuccess, downloadError, dispatch]);

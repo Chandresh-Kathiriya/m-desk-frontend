@@ -8,6 +8,57 @@ import { RootState } from '../../../store/reducers';
 import Rating from '../../../common/components/Rating';
 
 import styles from '../../../schemas/css/HomePage.module.css';
+import { showToast } from '../../../common/utils/alertUtils';
+
+// --- NEW COMPONENT: Handles the "View More" logic for long filter lists ---
+const FilterGroup: React.FC<{
+    tab: any;
+    options: any[];
+    currentSelected: string[];
+    handleFilterChange: (tabId: string, itemId: string) => void;
+}> = ({ tab, options, currentSelected, handleFilterChange }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const INITIAL_LIMIT = 5; // Number of items to show before adding "View More"
+
+    const hasMore = options.length > INITIAL_LIMIT;
+    const visibleOptions = isExpanded ? options : options.slice(0, INITIAL_LIMIT);
+
+    return (
+        <div className={styles['filter-group']}>
+            <h4 className={styles['filter-group__title']}>{tab.label}</h4>
+            <ul className={styles['filter-list']}>
+                {visibleOptions.map((item: any) => (
+                    <li key={item._id}>
+                        <label className={styles['filter-label']}>
+                            <input
+                                type="checkbox"
+                                checked={currentSelected.includes(item._id)}
+                                onChange={() => handleFilterChange(tab.id, item._id)}
+                                className={styles['filter-checkbox']}
+                            />
+                            {tab.id === 'colors' && item.hexCode && (
+                                <span className={styles['filter-color-swatch']} style={{ backgroundColor: item.hexCode }}></span>
+                            )}
+                            <span style={{ fontWeight: currentSelected.includes(item._id) ? 'bold' : 'normal' }}>
+                                {item.name} {tab.id === 'sizes' && item.code ? `(${item.code})` : ''}
+                            </span>
+                        </label>
+                    </li>
+                ))}
+            </ul>
+            
+            {hasMore && (
+                <button 
+                    className={styles['filter-toggle-btn']} 
+                    onClick={() => setIsExpanded(!isExpanded)}
+                >
+                    {isExpanded ? '- View Less' : `+ View ${options.length - INITIAL_LIMIT} More`}
+                </button>
+            )}
+        </div>
+    );
+};
+
 
 const HomePage: React.FC = () => {
     const dispatch = useDispatch<any>();
@@ -79,7 +130,7 @@ const HomePage: React.FC = () => {
         setAppliedFilters(draftFilters);
         setPageNumber(1);
         setAllProducts([]);
-        setShowMobileFilters(false); 
+        setShowMobileFilters(false);
     };
 
     const handleClearFilters = () => {
@@ -87,7 +138,7 @@ const HomePage: React.FC = () => {
         setAppliedFilters({});
         setPageNumber(1);
         setAllProducts([]);
-        setShowMobileFilters(false); 
+        setShowMobileFilters(false);
     };
 
     const openCartModal = (e: React.MouseEvent, product: any) => {
@@ -115,8 +166,13 @@ const HomePage: React.FC = () => {
             (v: any) => v.color === modalColor && v.size === modalSize
         );
 
-        if (!currentVariant) return alert("Please select a valid color and size.");
-        if (currentVariant.stock < modalQty) return alert(`Only ${currentVariant.stock} items available in this variant.`);
+        if (!currentVariant) {
+            return showToast("Please select a valid color and size.", "error");
+        }
+
+        if (currentVariant.stock < modalQty) {
+            return showToast(`Only ${currentVariant.stock} items available in this variant.`, "error");
+        }
 
         const cleanProduct = {
             ...selectedProductForCart,
@@ -124,6 +180,7 @@ const HomePage: React.FC = () => {
         };
 
         dispatch(addToCart(cleanProduct, currentVariant, modalQty, navigate));
+        showToast(`${selectedProductForCart.productName} added to cart!`, 'success');
         closeCartModal();
     };
 
@@ -195,13 +252,9 @@ const HomePage: React.FC = () => {
                 {/* --- DYNAMIC FILTER SIDEBAR / DRAWER --- */}
                 <aside className={`${styles['sidebar-filter']} ${showMobileFilters ? styles['sidebar-filter--open'] : ''}`}>
 
-                    {/* --- UNIFIED STICKY HEADER --- */}
                     <div className={styles['sidebar-filter__sticky-header']}>
-
-                        {/* --- DESKTOP HEADER (All 3 on one line) --- */}
                         <div className={styles['sidebar-filter__header-desktop']}>
                             <h3 style={{ margin: 0, fontSize: '18px' }}>Filters</h3>
-
                             {filterStructure.length > 0 && (
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button className="btn btn--outline" style={{ padding: '6px 12px', fontSize: '12px', minWidth: 'auto' }} onClick={handleClearFilters}>Clear</button>
@@ -210,13 +263,11 @@ const HomePage: React.FC = () => {
                             )}
                         </div>
 
-                        {/* --- MOBILE HEADER --- */}
                         <div className={styles['sidebar-filter__header-mobile']}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                 <h3 style={{ margin: 0, fontSize: '20px' }}>Refine By</h3>
                                 <button onClick={() => setShowMobileFilters(false)} style={{ background: 'none', border: 'none', fontSize: '28px', cursor: 'pointer', color: 'var(--color-neutral-600)', lineHeight: 1 }}>&times;</button>
                             </div>
-
                             {filterStructure.length > 0 && (
                                 <div style={{ display: 'flex', gap: '10px' }}>
                                     <button className="btn btn--outline" style={{ flex: 1, padding: '10px' }} onClick={handleClearFilters}>Clear</button>
@@ -226,7 +277,7 @@ const HomePage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* --- SCROLLABLE FILTER CONTENT --- */}
+                    {/* --- FILTER CONTENT (Using the new Component) --- */}
                     <div className={styles['sidebar-filter__content']}>
                         {filterStructure.map((tab: any) => {
                             const options = filterOptions[tab.id] || [];
@@ -234,29 +285,13 @@ const HomePage: React.FC = () => {
                             const currentSelected = draftFilters[tab.id] || [];
 
                             return (
-                                <div key={tab.id} style={{ marginBottom: '1.5rem' }}>
-                                    <h4 style={{ fontSize: '14px', textTransform: 'uppercase', color: '#6b7280', marginBottom: '10px' }}>{tab.label}</h4>
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {options.map((item: any) => (
-                                            <li key={item._id}>
-                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={currentSelected.includes(item._id)}
-                                                        onChange={() => handleFilterChange(tab.id, item._id)}
-                                                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                                                    />
-                                                    {tab.id === 'colors' && item.hexCode && (
-                                                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', backgroundColor: item.hexCode, border: '1px solid #ccc' }}></span>
-                                                    )}
-                                                    <span style={{ fontWeight: currentSelected.includes(item._id) ? 'bold' : 'normal' }}>
-                                                        {item.name} {tab.id === 'sizes' && item.code ? `(${item.code})` : ''}
-                                                    </span>
-                                                </label>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
+                                <FilterGroup 
+                                    key={tab.id}
+                                    tab={tab}
+                                    options={options}
+                                    currentSelected={currentSelected}
+                                    handleFilterChange={handleFilterChange}
+                                />
                             );
                         })}
                     </div>
@@ -324,7 +359,6 @@ const HomePage: React.FC = () => {
                                                     </button>
                                                 </div>
                                             </div>
-
                                         </Link>
                                     </article>
                                 );

@@ -12,6 +12,7 @@ import Rating from '../../../common/components/Rating';
 
 // Import CSS Module
 import styles from '../../../schemas/css/ProductDetailsPage.module.css';
+import { showToast } from '../../../common/utils/alertUtils';
 
 const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -87,30 +88,39 @@ const ProductDetailsPage: React.FC = () => {
   // Reviews logic
   useEffect(() => {
     if (successCreateReview) {
-      alert('Review submitted successfully!');
+      showToast('Review submitted successfully!', 'success');
       setRating(0);
       setComment('');
       dispatch({ type: REVIEW_CREATE_RESET });
       if (id) dispatch(getStorefrontProductDetails(id));
     }
+
     if (successUpdateReview) {
-      alert('Review updated successfully!');
+      showToast('Review updated successfully!', 'success');
       setEditingReviewId(null);
       setRating(0);
       setComment('');
       dispatch({ type: REVIEW_UPDATE_RESET });
       if (id) dispatch(getStorefrontProductDetails(id));
     }
+
     if (successVote) {
       dispatch({ type: REVIEW_VOTE_RESET });
       if (id) dispatch(getStorefrontProductDetails(id));
     }
+
     if (successReport) {
-      alert('Review reported to administrators.');
+      showToast('Review reported to administrators.', 'success');
       dispatch({ type: REVIEW_REPORT_RESET });
     }
-    if (errorVote) alert(errorVote);
-    if (errorReport) alert(errorReport);
+
+    if (errorVote) {
+      showToast(errorVote, 'error');
+    }
+
+    if (errorReport) {
+      showToast(errorReport, 'error');
+    }
   }, [dispatch, id, successCreateReview, successUpdateReview, successVote, successReport, errorVote, errorReport]);
 
   // Purchase verification logic
@@ -290,6 +300,10 @@ const ProductDetailsPage: React.FC = () => {
   const addToCartHandler = () => {
     if (currentVariant) {
       dispatch(addToCart(product, currentVariant, qty, navigate));
+      
+      // --- UPGRADED: Success Toast ---
+      showToast(`${product.productName} added to cart!`, 'success');
+      
       if (userInfo && userInfo.token) {
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 2500);

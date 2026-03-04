@@ -11,6 +11,7 @@ import { uploadBatchImages } from '../../../store/actions/admin/uploadActions';
 import { UPLOAD_IMAGE_RESET } from '../../../store/constants/admin/uploadConstants';
 
 import styles from '../../../schemas/css/ProductForm.module.css';
+import { showErrorAlert, showToast } from '../../../common/utils/alertUtils';
 
 interface PendingImage { id: string; file: File; preview: string; color: string; view: string; }
 interface ProductImage { url: string; color: string; view: string; }
@@ -70,12 +71,12 @@ const ProductForm: React.FC = () => {
   useEffect(() => {
     if (uploadSuccess && uploadedImages && uploadedImages.length > 0) {
       setFormData(prev => ({ ...prev, images: [...prev.images, ...uploadedImages] }));
-      setPendingImages([]); 
+      setPendingImages([]);
       setIsUploadingBatch(false);
-      dispatch({ type: UPLOAD_IMAGE_RESET }); 
+      dispatch({ type: UPLOAD_IMAGE_RESET });
     }
     if (uploadError) {
-      alert(`Upload failed: ${uploadError}`);
+      showErrorAlert('Upload Failed', uploadError);
       setIsUploadingBatch(false);
       dispatch({ type: UPLOAD_IMAGE_RESET });
     }
@@ -126,10 +127,11 @@ const ProductForm: React.FC = () => {
 
   const generateVariants = () => {
     if (!formData.brand || !formData.productType || !formData.style || !formData.productCategory) {
-      return alert('Please select a Brand, Type, Style, and Category before generating SKUs.');
+      return showToast('Please select a Brand, Type, Style, and Category before generating SKUs.', 'error');
     }
+
     if (formData.colors.length === 0 || formData.sizes.length === 0) {
-      return alert('Please select at least one Color and Size.');
+      return showToast('Please select at least one Color and Size.', 'error');
     }
 
     const selectedBrand = brands.find((b: any) => b._id === formData.brand)?.name || 'BRN';
@@ -171,15 +173,15 @@ const ProductForm: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, colorTarget: string) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
-    
+
     const newPending: PendingImage[] = files.map(file => ({
       id: Math.random().toString(36).substring(7),
-      file, preview: URL.createObjectURL(file), 
-      color: colorTarget.toLowerCase(), view: '' 
+      file, preview: URL.createObjectURL(file),
+      color: colorTarget.toLowerCase(), view: ''
     }));
-    
+
     setPendingImages(prev => [...prev, ...newPending]);
-    e.target.value = ''; 
+    e.target.value = '';
   };
 
   const updatePendingImage = (id: string, field: 'view', value: string) => {
@@ -188,13 +190,18 @@ const ProductForm: React.FC = () => {
 
   const confirmBatchUpload = () => {
     setIsUploadingBatch(true);
-    dispatch(uploadBatchImages(pendingImages)); 
+    dispatch(uploadBatchImages(pendingImages));
   };
 
   const submitHandler = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.productCategory) return alert('Select a Category.');
-    if (formData.variants.length === 0) return alert('Generate variants before saving.');
+    if (!formData.productCategory) {
+      return showToast('Select a Category.', 'error');
+    }
+
+    if (formData.variants.length === 0) {
+      return showToast('Generate variants before saving.', 'error');
+    }
     if (isEditing) dispatch(updateProduct({ _id: id, ...formData }));
     else dispatch(createProduct(formData));
   };
@@ -235,7 +242,7 @@ const ProductForm: React.FC = () => {
     <main className={styles['page-wrapper']}>
       <div className={styles.container}>
         <div className={styles.card}>
-          
+
           <h1 className={styles['page-title']}>{isEditing ? 'Edit Product' : 'Add New Product'}</h1>
 
           {loadingDetails && <div className={styles['spinner-container']}><div className={styles.spinner}></div></div>}
@@ -288,7 +295,7 @@ const ProductForm: React.FC = () => {
             {/* --- STEP 1: VARIANTS --- */}
             <div className={styles['section-box']}>
               <h2 className={styles['section-title']}>1. Select Variants & Generate SKUs</h2>
-              
+
               <div className={styles['form-grid-2']}>
                 <div>
                   <label className={styles.label}>Available Colors</label>
@@ -367,7 +374,7 @@ const ProductForm: React.FC = () => {
             {/* --- STEP 2: IMAGES --- */}
             <div className={`${styles['section-box']} ${styles['section-box--white']}`}>
               <h2 className={styles['section-title']}>2. Upload Images by Color</h2>
-              
+
               {activeColorNames.length === 0 ? (
                 <div className={`${styles.alert} ${styles['alert--warning']}`}>
                   Select Colors in Step 1 to unlock image uploads.
@@ -475,7 +482,7 @@ const ProductForm: React.FC = () => {
             <div className={styles['modal-body']}>
               <form onSubmit={handleStockSubmit}>
                 {updateError && <div className={`${styles.alert} ${styles['alert--error']}`}>{updateError}</div>}
-                
+
                 {activeStockIndex !== null && (
                   <div className={styles['selected-item-box']}>
                     <div className={styles['selected-item-title']}>{formData.productName || 'New Product'}</div>

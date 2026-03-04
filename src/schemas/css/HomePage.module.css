@@ -281,3 +281,84 @@
 .state-message { padding: var(--space-4) var(--space-6); border-radius: var(--radius-md); font-weight: var(--font-weight-medium); text-align: center; }
 .state-container--error .state-message { background-color: var(--color-error-100); color: var(--color-error-600); }
 .state-container--empty .state-message { background-color: var(--color-primary-50); color: var(--color-primary-700); }
+
+/* --- Filter Item Overhaul --- */
+.filter-group {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.filter-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.filter-group__title {
+    font-size: 14px;
+    text-transform: uppercase;
+    color: var(--color-neutral-600);
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+}
+
+.filter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* Removed fixed max-height. The array slicing handles the limit now! */
+}
+
+.filter-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-neutral-800);
+    transition: color var(--transition-fast);
+}
+
+.filter-label:hover {
+    color: var(--color-primary-700);
+}
+
+.filter-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-primary-600);
+    flex-shrink: 0;
+}
+
+.filter-color-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--color-neutral-300);
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+/* The View More Button */
+.filter-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-primary-600);
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    padding: 0;
+    margin-top: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.filter-toggle-btn:hover {
+    color: var(--color-primary-700);
+    text-decoration: underline;
+}

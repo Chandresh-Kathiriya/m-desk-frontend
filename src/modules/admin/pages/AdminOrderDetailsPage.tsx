@@ -8,6 +8,7 @@ import { ORDER_DELIVER_RESET, ORDER_PAY_MANUAL_RESET } from '../../../store/cons
 import { ADMIN_INVOICE_BY_ORDER_RESET } from '../../../store/constants/admin/invoiceConstants';
 
 import styles from '../../../schemas/css/AdminOrderDetailsPage.module.css';
+import { showToast } from '../../../common/utils/alertUtils';
 
 const AdminOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -32,26 +33,11 @@ const AdminOrderDetailsPage: React.FC = () => {
     // Local State for Manual Payment Date
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
-    // --- 🔍 ADDED DEBUGGING LOGS ---
-    useEffect(() => {
-        console.log("🔍 DEBUG [Order State]:", { loading, error, order });
-    }, [order, loading, error]);
-
-    useEffect(() => {
-        console.log("🔍 DEBUG [Invoice State]:", { invoiceLoading, invoiceError, invoice });
-    }, [invoice, invoiceLoading, invoiceError]);
-
-    useEffect(() => {
-        console.log("🔍 DEBUG [Manual Pay State]:", { isPaying, successPayManual, errorPayManual });
-    }, [isPaying, successPayManual, errorPayManual]);
-    // -------------------------------
-
     // Fetch Order Data
     useEffect(() => {
         if (!order || order._id !== id || successDeliver) {
             dispatch({ type: ORDER_DELIVER_RESET });
             if (id) {
-                console.log(`🚀 DEBUG: Dispatching getOrderDetails for ID: ${id}`);
                 dispatch(getOrderDetails(id));
             }
         }
@@ -60,11 +46,9 @@ const AdminOrderDetailsPage: React.FC = () => {
     // Check for an attached Customer Invoice
     useEffect(() => {
         if (id && userInfo) {
-            console.log(`🚀 DEBUG: Dispatching getAdminInvoiceByOrderId for Order ID: ${id}`);
             dispatch(getAdminInvoiceByOrderId(id));
         }
         return () => {
-            console.log(`🧹 DEBUG: Cleaning up Invoice State on unmount`);
             dispatch({ type: ADMIN_INVOICE_BY_ORDER_RESET });
         };
     }, [dispatch, id, userInfo]);
@@ -72,16 +56,15 @@ const AdminOrderDetailsPage: React.FC = () => {
     // Handle Manual Payment Success/Error
     useEffect(() => {
         if (successPayManual) {
-            alert("Payment recorded successfully!");
+            showToast("Payment recorded successfully!", "success");
             dispatch({ type: ORDER_PAY_MANUAL_RESET });
             if (id) {
-                console.log(`🔄 DEBUG: Payment Success! Re-fetching Order and Invoice...`);
                 dispatch(getOrderDetails(id));
-                dispatch(getAdminInvoiceByOrderId(id)); 
+                dispatch(getAdminInvoiceByOrderId(id));
             }
         }
         if (errorPayManual) {
-            alert(errorPayManual);
+            showToast(errorPayManual, "success");
             dispatch({ type: ORDER_PAY_MANUAL_RESET });
         }
     }, [successPayManual, errorPayManual, dispatch, id]);
@@ -93,9 +76,10 @@ const AdminOrderDetailsPage: React.FC = () => {
     };
 
     const handleMarkAsPaid = () => {
-        if (!paymentDate) return alert("Please select a payment date.");
+        if (!paymentDate) {
+            return showToast("Please select a payment date.", "error");
+        }
         if (id) {
-            console.log(`💸 DEBUG: Triggering Manual Pay for Date: ${paymentDate}`);
             dispatch(payOrderManual(id, paymentDate));
         }
     };
@@ -109,7 +93,7 @@ const AdminOrderDetailsPage: React.FC = () => {
     return (
         <main className={styles['page-wrapper']}>
             <div className={styles.container}>
-                
+
                 <header className={styles.header}>
                     <h1 className={styles['page-title']}>Manage Order {formatOrderId(order._id)}</h1>
                     <Link to="/admin/orders" className={`${styles.btn} ${styles['btn-outline']}`}>
@@ -120,12 +104,12 @@ const AdminOrderDetailsPage: React.FC = () => {
                         Back to Orders
                     </Link>
                 </header>
-                
+
                 <div className={styles.layout}>
-                    
+
                     {/* LEFT COLUMN */}
                     <div className={styles['main-column']}>
-                        
+
                         {/* Order & Customer Details */}
                         <div className={styles.card}>
                             <div className={styles['card-header']}>
@@ -133,7 +117,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                             </div>
                             <div className={styles['card-body']}>
                                 <div className={styles['info-grid']}>
-                                    
+
                                     <div className={styles['info-group']}>
                                         <span className={styles['info-label']}>Customer Name</span>
                                         <span className={styles['info-value']} style={{ fontWeight: 'bold' }}>{order.user?.name}</span>
@@ -172,8 +156,8 @@ const AdminOrderDetailsPage: React.FC = () => {
                                             <div>
                                                 <span className={styles['info-label']}>Shipping Address</span>
                                                 <div className={styles['info-value']} style={{ lineHeight: '1.6' }}>
-                                                    {order.shippingAddress?.address}<br/>
-                                                    {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}<br/>
+                                                    {order.shippingAddress?.address}<br />
+                                                    {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}<br />
                                                     {order.shippingAddress?.country}
                                                 </div>
                                             </div>
@@ -182,8 +166,8 @@ const AdminOrderDetailsPage: React.FC = () => {
                                                 <div className={styles['info-value']} style={{ lineHeight: '1.6' }}>
                                                     {order.billingAddress && order.billingAddress.address ? (
                                                         <>
-                                                            {order.billingAddress.address}<br/>
-                                                            {order.billingAddress.city}, {order.billingAddress.postalCode}<br/>
+                                                            {order.billingAddress.address}<br />
+                                                            {order.billingAddress.city}, {order.billingAddress.postalCode}<br />
                                                             {order.billingAddress.country}
                                                         </>
                                                     ) : (
@@ -224,7 +208,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                                     {order.orderItems?.map((item: any, index: number) => (
                                         <li key={index} className={styles['item-row']}>
                                             <img src={item.image} alt={item.name} className={styles['item-image']} />
-                                            
+
                                             <div className={styles['item-details']}>
                                                 <Link to={`/product/${item.product}`} className={styles['item-name']}>
                                                     {item.name}
@@ -233,7 +217,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                                                     SKU: {item.sku} | Color: {item.color} | Size: {item.size}
                                                 </div>
                                             </div>
-                                            
+
                                             <div className={styles['item-price-block']}>
                                                 <div className={styles['item-calculation']}>
                                                     {item.qty} x ₹{item.price.toFixed(2)}
@@ -257,7 +241,7 @@ const AdminOrderDetailsPage: React.FC = () => {
                                 <h2 className={styles['card-title']}>Action Panel</h2>
                             </div>
                             <div className={styles['card-body']}>
-                                
+
                                 <div className={styles['summary-row']}>
                                     <span className={styles['summary-label']}>Payment Status</span>
                                     <span className={styles['summary-value']}>
@@ -284,27 +268,27 @@ const AdminOrderDetailsPage: React.FC = () => {
                                 {!order.isPaid && (
                                     <div style={{ marginTop: '1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                         <h4 style={{ fontSize: '14px', marginBottom: '12px', color: '#1e293b', fontWeight: '600' }}>Record Customer Payment</h4>
-                                        
+
                                         <label style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Date Payment Received:</label>
-                                        <input 
-                                            type="date" 
-                                            value={paymentDate} 
-                                            onChange={e => setPaymentDate(e.target.value)} 
-                                            style={{ width: '100%', padding: '10px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }} 
+                                        <input
+                                            type="date"
+                                            value={paymentDate}
+                                            onChange={e => setPaymentDate(e.target.value)}
+                                            style={{ width: '100%', padding: '10px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                                             max={new Date().toISOString().split('T')[0]}
                                         />
-                                        
+
                                         {order.manualPaymentDays > 0 && (
                                             <div style={{ fontSize: '12px', color: '#059669', marginBottom: '12px', background: '#ecfdf5', padding: '8px', borderRadius: '4px' }}>
-                                                <strong style={{display:'block'}}>Opportunity: 2% Early Discount</strong>
+                                                <strong style={{ display: 'block' }}>Opportunity: 2% Early Discount</strong>
                                                 If paid within {order.manualPaymentDays} days of invoice creation, a 2% discount will be auto-calculated.
                                             </div>
                                         )}
 
-                                        <button 
-                                            onClick={handleMarkAsPaid} 
-                                            disabled={isPaying} 
-                                            className={`${styles.btn} ${styles['btn-success']}`} 
+                                        <button
+                                            onClick={handleMarkAsPaid}
+                                            disabled={isPaying}
+                                            className={`${styles.btn} ${styles['btn-success']}`}
                                             style={{ width: '100%', justifyContent: 'center' }}
                                         >
                                             {isPaying ? 'Processing...' : 'Mark as Paid'}
@@ -315,8 +299,8 @@ const AdminOrderDetailsPage: React.FC = () => {
                                 {/* Official Admin Invoice Button */}
                                 {invoice?._id && (
                                     <div style={{ margin: 'var(--space-4) 0' }}>
-                                        <Link 
-                                            to={`/admin/invoice/${invoice._id}`} 
+                                        <Link
+                                            to={`/admin/invoice/${invoice._id}`}
                                             style={{
                                                 display: 'block', width: '100%', padding: '12px',
                                                 backgroundColor: 'var(--color-neutral-900)', color: 'white',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 import { RootState } from '../../../store/reducers';
 import { listContacts } from '../../../store/actions/admin/contactActions';
 import { listAdminProducts } from '../../../store/actions/admin/productActions';
@@ -45,7 +46,7 @@ const AdminCreatePurchaseOrderPage: React.FC = () => {
             navigate(`/admin/purchase/${purchase._id}`); // Jump directly to details to confirm
         }
         if (errorCreate) {
-            alert(`Failed to create PO: ${errorCreate}`);
+            showErrorAlert('Creation Failed', `Failed to create PO: ${errorCreate}`);
             dispatch({ type: PURCHASE_CREATE_RESET });
         }
     }, [success, purchase, errorCreate, navigate, dispatch]);

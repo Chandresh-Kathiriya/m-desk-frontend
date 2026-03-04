@@ -8,6 +8,7 @@ import { BILL_DETAILS_RESET } from '../../../store/constants/admin/billConstants
 import { PAYMENT_CREATE_RESET } from '../../../store/constants/admin/paymentConstants';
 
 import styles from '../../../schemas/css/AdminVendorBillDetailsPage.module.css';
+import { showErrorAlert, showToast } from '../../../common/utils/alertUtils';
 
 const AdminVendorBillDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -56,25 +57,30 @@ const AdminVendorBillDetailsPage: React.FC = () => {
     // Handle Payment Success
     useEffect(() => {
         if (successPayment) {
-            alert('Payment successfully registered!');
+            // --- UPGRADED: Success Toast ---
+            showToast('Payment successfully registered!', 'success');
+
             setShowModal(false);
-            setBankName(''); 
-            setAccountNumber(''); 
-            setIfscCode(''); 
-            setReferenceId(''); 
+            setBankName('');
+            setAccountNumber('');
+            setIfscCode('');
+            setReferenceId('');
             setNotes('');
             dispatch({ type: PAYMENT_CREATE_RESET });
-            if (id) dispatch(getBillDetails(id)); 
+            if (id) dispatch(getBillDetails(id));
         }
+
         if (errorPayment) {
-            alert(errorPayment);
+            // --- UPGRADED: Error Alert ---
+            showErrorAlert('Payment Failed', errorPayment);
+
             dispatch({ type: PAYMENT_CREATE_RESET });
         }
     }, [successPayment, errorPayment, dispatch, id]);
 
     const handleRegisterPayment = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         let formattedNotes = notes;
         if (paymentMethod === 'Bank Transfer') {
             const details = [
@@ -116,14 +122,13 @@ const AdminVendorBillDetailsPage: React.FC = () => {
     return (
         <main className={styles['page-wrapper']}>
             <div className={styles.container}>
-                
+
                 <header className={styles.header}>
                     <div className={styles['title-group']}>
                         <h1 className={styles['page-title']}>Vendor Bill: {bill.billNumber}</h1>
-                        <span className={`${styles.badge} ${
-                            bill.status === 'paid' ? styles['badge--success'] :
-                            bill.status === 'partially_paid' ? styles['badge--warning'] : styles['badge--neutral']
-                        }`}>
+                        <span className={`${styles.badge} ${bill.status === 'paid' ? styles['badge--success'] :
+                                bill.status === 'partially_paid' ? styles['badge--warning'] : styles['badge--neutral']
+                            }`}>
                             {bill.status.replace('_', ' ')}
                         </span>
                     </div>
@@ -150,8 +155,8 @@ const AdminVendorBillDetailsPage: React.FC = () => {
                     </div>
 
                     {balanceDue > 0 && !showModal && (
-                        <button 
-                            onClick={() => setShowModal(true)} 
+                        <button
+                            onClick={() => setShowModal(true)}
                             className={`${styles.btn} ${styles['btn-success']}`}
                         >
                             Register Payment
@@ -255,7 +260,7 @@ const AdminVendorBillDetailsPage: React.FC = () => {
                 {/* --- BILL DETAILS CARD --- */}
                 <div className={styles.card}>
                     <h2 className={styles['card-title']}>Invoice Details</h2>
-                    
+
                     <div className={styles['info-grid']}>
                         <div className={styles['info-group']}>
                             <span className={styles.label}>Vendor</span>

@@ -4,8 +4,12 @@ import {
     MASTER_DATA_CREATE_REQUEST, MASTER_DATA_CREATE_SUCCESS, MASTER_DATA_CREATE_FAIL,
     MASTER_DATA_UPDATE_REQUEST, MASTER_DATA_UPDATE_SUCCESS, MASTER_DATA_UPDATE_FAIL,
     MASTER_DATA_TABS_REQUEST, MASTER_DATA_TABS_SUCCESS, MASTER_DATA_TABS_FAIL,
-    MASTER_DATA_TAB_CREATE_REQUEST, MASTER_DATA_TAB_CREATE_SUCCESS, MASTER_DATA_TAB_CREATE_FAIL
+    MASTER_DATA_TAB_CREATE_REQUEST, MASTER_DATA_TAB_CREATE_SUCCESS, MASTER_DATA_TAB_CREATE_FAIL,
+    MASTER_DATA_TAB_DELETE_FAIL,
+    MASTER_DATA_TAB_DELETE_SUCCESS,
+    MASTER_DATA_TAB_DELETE_REQUEST
 } from '../../constants/admin/masterDataConstants';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 export const listMasterDataTabs = () => async (dispatch: any, getState: any) => {
     try {
@@ -73,6 +77,24 @@ export const deleteMasterData = (type: string, id: string) => async (dispatch: a
         const config = { headers: { Authorization: `Bearer ${(adminInfo || userInfo).token}` } };
         await axios.delete(`/api/masterdata/${type}/${id}`, config);
     } catch (error: any) {
-        alert(error.response?.data?.message || 'Failed to delete record');
+        showErrorAlert('Deletion Failed', error.response?.data?.message || 'Failed to delete record');
+    }
+};
+
+export const deleteMasterDataTab = (tabId: string) => async (dispatch: any, getState: any) => {
+    try {
+        dispatch({ type: MASTER_DATA_TAB_DELETE_REQUEST });
+
+        const userInfo = getState().adminAuth?.adminInfo || getState().adminAuth?.userInfo;
+        const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+        
+        await axios.delete(`/api/masterdata/admin/tabs/${tabId}`, config);
+
+        dispatch({ type: MASTER_DATA_TAB_DELETE_SUCCESS });
+    } catch (error: any) {
+        dispatch({
+            type: MASTER_DATA_TAB_DELETE_FAIL,
+            payload: error.response?.data?.message || error.message,
+        });
     }
 };

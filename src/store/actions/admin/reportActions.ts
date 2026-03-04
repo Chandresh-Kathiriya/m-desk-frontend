@@ -5,6 +5,7 @@ import {
     REPORT_SALES_CUSTOMERS_REQUEST, REPORT_SALES_CUSTOMERS_SUCCESS, REPORT_SALES_CUSTOMERS_FAIL,
     REPORT_PURCHASES_VENDORS_REQUEST, REPORT_PURCHASES_VENDORS_SUCCESS, REPORT_PURCHASES_VENDORS_FAIL
 } from '../../constants/admin/reportConstants';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 export const getSalesReportByProducts = (startDate?: string, endDate?: string) => async (dispatch: any, getState: any) => {
     try {
@@ -84,7 +85,7 @@ export const downloadAdminReport = (exportData: { title: string, headers: string
         link.click();
         link.parentNode?.removeChild(link); 
     } catch (error: any) {
-        alert('Failed to generate report from server.');
+        showErrorAlert('Report Generation Failed', 'Failed to generate report from server.');
         console.error(error);
     }
 };

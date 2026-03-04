@@ -6,6 +6,7 @@ import { getPurchaseOrderDetails, receivePurchaseOrder, downloadAdminPO } from '
 import { PURCHASE_DETAILS_RESET, PURCHASE_RECEIVE_RESET } from '../../../store/constants/admin/purchaseConstants';
 
 import styles from '../../../schemas/css/AdminPurchaseOrderDetailsPage.module.css';
+import { showErrorAlert, showSuccessAlert } from '../../../common/utils/alertUtils';
 
 const AdminPurchaseOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -39,12 +40,17 @@ const AdminPurchaseOrderDetailsPage: React.FC = () => {
     // Handle Receive & Bill Success
     useEffect(() => {
         if (successReceive) {
-            alert('Goods Received! Stock updated and Vendor Bill Generated.');
+            showSuccessAlert(
+                "Goods Received!", 
+                "Stock has been updated and the Vendor Bill was generated successfully."
+            );
             setShowReceiveForm(false);
             dispatch({ type: PURCHASE_RECEIVE_RESET });
             if (id) dispatch(getPurchaseOrderDetails(id));
         }
-        if (errorReceive) alert(`Failed to process: ${errorReceive}`);
+        if (errorReceive) {
+            showErrorAlert("Processing Failed", `Failed to process: ${errorReceive}`);
+        }
     }, [successReceive, errorReceive, dispatch, id]);
 
     // Action: Unified Receive & Bill

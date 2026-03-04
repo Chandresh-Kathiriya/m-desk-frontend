@@ -6,6 +6,7 @@ import { RootState } from '../../../store/reducers';
 
 // Import CSS Module
 import styles from '../../../schemas/css/CartPage.module.css';
+import { showToast } from '../../../common/utils/alertUtils';
 
 const CartPage: React.FC = () => {
   const dispatch = useDispatch<any>();
@@ -44,7 +45,7 @@ const CartPage: React.FC = () => {
     if (newQty < 1) {
       removeFromCartHandler(item.sku);
     } else if (newQty > item.maxStock) {
-      alert(`Sorry, we only have ${item.maxStock} of these left in stock!`);
+      showToast(`Sorry, we only have ${item.maxStock} of these left in stock!`, 'error');
     } else {
       setProcessingSku(item.sku); // Start Spinner
       await dispatch(updateCartQty(item.sku, newQty));

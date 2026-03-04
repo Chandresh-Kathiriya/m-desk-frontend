@@ -21,7 +21,8 @@ import {
   masterDataCreateReducer,
   masterDataUpdateReducer,
   masterDataTabsReducer,
-  masterDataTabCreateReducer
+  masterDataTabCreateReducer,
+  masterDataTabDeleteReducer
 } from './admin/masterDataReducers';
 import { inventoryListReducer, inventoryUpdateReducer } from './admin/inventoryReducers';
 import { storefrontProductListReducer, storefrontProductDetailsReducer, storefrontSimilarProductsReducer } from './storefront/productReducers';
@@ -45,7 +46,7 @@ import {
   reportSalesCustomersReducer,
   reportPurchasesVendorsReducer
 } from './admin/reportReducers';
-import { userListReducer } from './admin/userReducers';
+import { userCreateReducer, userListReducer } from './admin/userReducers';
 import { publicFiltersReducer } from './storefront/filterReducers';
 
 const rootReducer = combineReducers({
@@ -121,6 +122,8 @@ const rootReducer = combineReducers({
   orderPayManual: orderPayManualReducer,
   publicFilters: publicFiltersReducer,
   storefrontSimilarProducts: storefrontSimilarProductsReducer,
+  userCreate: userCreateReducer,
+  masterDataTabDelete: masterDataTabDeleteReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

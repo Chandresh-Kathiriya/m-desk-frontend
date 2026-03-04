@@ -6,6 +6,7 @@ import { listMyInvoices, downloadUserInvoice } from '../../../store/actions/user
 import { USER_INVOICE_DOWNLOAD_RESET } from '../../../store/constants/user/invoiceConstants';
 
 import styles from '../../../schemas/css/MyInvoicesPage.module.css';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 const MyInvoicesPage: React.FC = () => {
     const navigate = useNavigate();
@@ -38,7 +39,7 @@ const MyInvoicesPage: React.FC = () => {
             dispatch({ type: USER_INVOICE_DOWNLOAD_RESET });
         }
         if (downloadError) {
-            alert(downloadError);
+            showErrorAlert('Download Failed', downloadError);
             dispatch({ type: USER_INVOICE_DOWNLOAD_RESET });
         }
     }, [downloadSuccess, downloadError, dispatch]);

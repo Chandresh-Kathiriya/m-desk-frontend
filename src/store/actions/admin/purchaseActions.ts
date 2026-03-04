@@ -12,6 +12,7 @@ import {
     PURCHASE_RECEIVE_FAIL,
     PURCHASE_DOWNLOAD_REQUEST,
 } from '../../constants/admin/purchaseConstants';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 export const createPurchaseOrder = (purchaseData: any) => async (dispatch: any, getState: any) => {
     try {
@@ -118,7 +119,7 @@ export const downloadAdminPO = (id: string, orderNumber: string) => async (dispa
 
         // dispatch({ type: PURCHASE_DOWNLOAD_SUCCESS });
     } catch (error: any) {
-        alert('Failed to download PO PDF.');
+        showErrorAlert('Download Failed', 'Failed to download PO PDF.');
     }
 };
 
@@ -142,6 +143,6 @@ export const downloadAdminBill = (id: string, billNumber: string) => async (disp
         link.click();
         link.parentNode?.removeChild(link); 
     } catch (error: any) {
-        alert('Failed to download Bill PDF.');
+        showErrorAlert('Download Failed', 'Failed to download Bill PDF.');
     }
 };

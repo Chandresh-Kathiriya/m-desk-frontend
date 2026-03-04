@@ -12,6 +12,7 @@ import { STRIPE_INTENT_RESET } from '../../../store/constants/user/orderConstant
 import { RootState } from '../../../store/reducers';
 
 import styles from '../../../schemas/css/CheckoutPage.module.css';
+import { showErrorAlert } from '../../../common/utils/alertUtils';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -69,7 +70,7 @@ const CheckoutPage: React.FC = () => {
 
     useEffect(() => {
         if (intentError) {
-            alert(`Payment Gateway Error: ${intentError}`);
+            showErrorAlert('Payment Gateway Error', intentError);
             dispatch({ type: STRIPE_INTENT_RESET });
         }
     }, [intentError, dispatch]);
