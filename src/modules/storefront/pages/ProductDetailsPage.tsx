@@ -546,7 +546,7 @@ const ProductDetailsPage: React.FC = () => {
                           <span className={styles['review-card__date']}>
                             {new Date(review.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                           </span>
-                          {review.isEdited && <span className={styles['review-card__edited']}>(Edited)</span>}
+                          {/* {review.isEdited && <span className={styles['review-card__edited']}>(Edited)</span>} */}
 
                           {/* --- UPGRADED: EDIT BUTTON --- */}
                           {/* --- UPGRADED: EDIT & DELETE BUTTONS --- */}
