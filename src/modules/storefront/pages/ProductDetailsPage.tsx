@@ -300,10 +300,10 @@ const ProductDetailsPage: React.FC = () => {
   const addToCartHandler = () => {
     if (currentVariant) {
       dispatch(addToCart(product, currentVariant, qty, navigate));
-      
+
       // --- UPGRADED: Success Toast ---
       showToast(`${product.productName} added to cart!`, 'success');
-      
+
       if (userInfo && userInfo.token) {
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 2500);
@@ -327,6 +327,15 @@ const ProductDetailsPage: React.FC = () => {
   ) : null;
 
   const hasReviewed = !!userExistingReview;
+
+  const handleEditReviewClick = (review: any) => {
+    setEditingReviewId(review._id);
+    setRating(review.rating);
+    setComment(review.comment);
+
+    // Smoothly scroll down to the review form
+    document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <main className={styles['product-page']}>
@@ -476,7 +485,6 @@ const ProductDetailsPage: React.FC = () => {
                     <li key={review._id} className={styles['review-card']}>
                       <div className={styles['review-card__header']}>
 
-                        {/* UPGRADED AUTHOR INFO WITH AVATAR */}
                         <div className={styles['review-card__author-group']}>
                           <div className={styles['review-card__avatar']}>
                             {review.name ? review.name.charAt(0).toUpperCase() : 'U'}
@@ -500,6 +508,21 @@ const ProductDetailsPage: React.FC = () => {
                             {new Date(review.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                           </span>
                           {review.isEdited && <span className={styles['review-card__edited']}>(Edited)</span>}
+
+                          {/* --- UPGRADED: EDIT BUTTON --- */}
+                          {isOwner && (
+                            <button
+                              onClick={() => handleEditReviewClick(review)}
+                              className={styles['review-card__edit-btn']}
+                              aria-label="Edit Review"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                              </svg>
+                              Edit
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -512,12 +535,15 @@ const ProductDetailsPage: React.FC = () => {
             </div>
 
             <aside className={styles['review-form-container']}>
-              <div className={styles['review-form-card']}>
-                <h3 className={styles['review-form-card__title']}>{editingReviewId ? 'Edit Your Review' : 'Write a Review'}</h3>
+              {/* --- UPGRADED: DYNAMIC EDITING STYLES --- */}
+              <div className={`${styles['review-form-card']} ${editingReviewId ? styles['review-form-card--editing'] : ''}`}>
+                <div className={styles['review-form-header']}>
+                  <h3 className={styles['review-form-card__title']}>{editingReviewId ? 'Edit Your Review' : 'Write a Review'}</h3>
+                  {editingReviewId && <span className={styles['editing-badge']}>Editing</span>}
+                </div>
 
-                {/* --- CONDITIONAL FORM DISPLAY --- */}
                 {!userInfo ? (
-                  <p className="text-muted text-sm">Please <Link to="/login" style={{ color: 'var(--color-primary-600)', fontWeight: 'bold' }}>sign in</Link> to write a review.</p>
+                  <p className={styles['state-message']} style={{ textAlign: 'left', padding: 0 }}>Please <Link to="/login" style={{ color: 'var(--color-primary-600)', fontWeight: 'bold' }}>sign in</Link> to write a review.</p>
                 ) : !hasPurchased ? (
                   <div className={styles['empty-state-box']}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
@@ -550,13 +576,15 @@ const ProductDetailsPage: React.FC = () => {
                       <textarea id="comment" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} required className={styles['form-input']} placeholder="Tell us what you think..."></textarea>
                     </div>
 
+                    {/* --- UPGRADED: ACTIONS LAYOUT --- */}
                     <div className={styles['review-form__actions']}>
-                      <button disabled={loadingCreateReview || loadingUpdateReview} type="submit" className="btn btn--primary" style={{ width: '100%' }}>
+                      <button disabled={loadingCreateReview || loadingUpdateReview} type="submit" className="btn btn--primary btn--full">
                         {loadingCreateReview || loadingUpdateReview ? 'Processing...' : (editingReviewId ? "Update Review" : "Submit Review")}
                       </button>
+
                       {editingReviewId && (
-                        <button type="button" className="btn btn--secondary mt-2" style={{ width: '100%' }} onClick={() => { setEditingReviewId(null); setRating(0); setComment(''); }}>
-                          Cancel
+                        <button type="button" className="btn btn--secondary btn--full" onClick={() => { setEditingReviewId(null); setRating(0); setComment(''); }}>
+                          Cancel Edit
                         </button>
                       )}
                     </div>
@@ -566,6 +594,7 @@ const ProductDetailsPage: React.FC = () => {
             </aside>
           </div>
         </section>
+
         {/* --- HORIZONTAL SCROLL SIMILAR PRODUCTS SECTION --- */}
         {displaySimilarProducts.length > 0 && (
           <section style={{ marginTop: '4rem', paddingTop: '2rem', borderTop: '1px solid #e5e7eb' }}>

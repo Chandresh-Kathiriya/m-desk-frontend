@@ -16,6 +16,7 @@ import OrderSuccessPage from './modules/user/pages/OrderSuccessPage.tsx';
 import OrderDetailsPage from './modules/user/pages/OrderDetailsPage.tsx';
 import MyInvoicesPage from './modules/user/pages/MyInvoicesPage.tsx';
 import InvoiceDetailsPage from './modules/user/pages/InvoiceDetailsPage.tsx';
+import UserProfile from './modules/user/pages/UserProfile.tsx';
 
 // Admin Imports
 import AdminLogin from './modules/admin/pages/AdminLogin.tsx';
@@ -39,6 +40,7 @@ import AdminVendorBillDetailsPage from './modules/admin/pages/AdminVendorBillDet
 import AdminVendorBillsPage from './modules/admin/pages/AdminVendorBillsPage.tsx';
 import AdminReportsPage from './modules/admin/pages/AdminReportsPage.tsx';
 import AdminOrderCreatePage from './modules/admin/pages/AdminOrderCreatePage.tsx';
+import AdminProfile from './modules/admin/pages/AdminProfile.tsx';
 
 function App() {
   return (
@@ -55,6 +57,7 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/profile" element={<UserProfile />} />
           <Route path="/order-success" element={<OrderSuccessPage />} />
           <Route path="/order/:id" element={<OrderDetailsPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />
@@ -84,6 +87,7 @@ function App() {
           <Route path="/admin/bills/:id" element={<AdminVendorBillDetailsPage />} />
           <Route path="/admin/bills" element={<AdminVendorBillsPage />} />
           <Route path="/admin/reports" element={<AdminReportsPage />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
 
         </Routes>
       </Layout>

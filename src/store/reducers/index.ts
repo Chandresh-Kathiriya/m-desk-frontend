@@ -47,6 +47,8 @@ import {
   reportPurchasesVendorsReducer
 } from './admin/reportReducers';
 import { userCreateReducer, userListReducer } from './admin/userReducers';
+import { userUpdateProfileReducer, userDetailsReducer } from './user/userReducers';
+import { adminUpdateProfileReducer, adminDetailsReducer } from './admin/adminReducer';
 import { publicFiltersReducer } from './storefront/filterReducers';
 
 const rootReducer = combineReducers({
@@ -124,6 +126,10 @@ const rootReducer = combineReducers({
   storefrontSimilarProducts: storefrontSimilarProductsReducer,
   userCreate: userCreateReducer,
   masterDataTabDelete: masterDataTabDeleteReducer,
+  userDetails: userDetailsReducer,
+  userUpdateProfile: userUpdateProfileReducer,
+  adminDetails: adminDetailsReducer,
+  adminUpdateProfile: adminUpdateProfileReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

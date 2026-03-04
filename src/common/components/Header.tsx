@@ -209,6 +209,15 @@ const Header: React.FC = () => {
                 </li>
 
                 <li className={styles['header__nav-item']}>
+                  <NavLink to="/admin/profile" className={getActiveClass}>
+                    <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    {text.profile || 'Profile'}
+                  </NavLink>
+                </li>
+
+                <li className={styles['header__nav-item']}>
                   <NavLink to="/admin/settings" className={getActiveClass}>
                     <svg
                       className={styles['header__nav-icon']}
@@ -271,6 +280,15 @@ const Header: React.FC = () => {
                       <path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h8"></path><path d="M8 9h4"></path>
                     </svg>
                     {text.invoices}
+                  </NavLink>
+                </li>
+
+                <li className={styles['header__nav-item']}>
+                  <NavLink to="/profile" className={getActiveClass}>
+                    <svg className={styles['header__nav-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    {text.profile || 'Profile'}
                   </NavLink>
                 </li>
 
