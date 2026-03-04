@@ -785,3 +785,32 @@
     gap: var(--space-3);
     margin-top: var(--space-4);
 }
+
+
+/* The Delete Button on the Review Card */
+.review-card__delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-error-600); /* Uses your red error variables */
+    background-color: var(--color-error-50);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    background-color: var(--color-error-100);
+}
+
+.review-card__delete-btn:hover:not(:disabled) {
+    background-color: var(--color-error-200);
+    color: var(--color-error-700);
+}
+
+.review-card__delete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

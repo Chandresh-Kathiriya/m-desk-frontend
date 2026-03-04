@@ -9,7 +9,7 @@ import {
 } from '../../../store/constants/admin/masterDataConstants';
 import { RootState } from '../../../store/reducers';
 import styles from '../../../schemas/css/MasterDataManagement.module.css';
-import { showConfirmDialog, showErrorAlert, showPromptDialog, showToast } from '../../../common/utils/alertUtils';
+import { showConfirmAlert, showConfirmDialog, showErrorAlert, showPromptDialog, showToast } from '../../../common/utils/alertUtils';
 
 const emptyRow = { name: '', description: '', hexCode: '#000000', code: '' };
 
@@ -159,7 +159,12 @@ const MasterDataManagement: React.FC = () => {
   };
 
   const handleDeleteRecord = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    const isConfirmed = await showConfirmAlert(
+      'Delete Item?',
+      'Are you sure you want to delete this item?',
+      'Yes, Delete'
+    );
+    if (isConfirmed) {
       try {
         setDeleteErrorMsg(null);
         await dispatch(deleteMasterData(activeTab, id)); 

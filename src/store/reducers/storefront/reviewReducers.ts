@@ -2,7 +2,11 @@ import {
     REVIEW_CREATE_REQUEST, REVIEW_CREATE_SUCCESS, REVIEW_CREATE_FAIL, REVIEW_CREATE_RESET,
     REVIEW_UPDATE_REQUEST, REVIEW_UPDATE_SUCCESS, REVIEW_UPDATE_FAIL, REVIEW_UPDATE_RESET,
     REVIEW_VOTE_REQUEST, REVIEW_VOTE_SUCCESS, REVIEW_VOTE_FAIL, REVIEW_VOTE_RESET,
-    REVIEW_REPORT_REQUEST, REVIEW_REPORT_SUCCESS, REVIEW_REPORT_FAIL, REVIEW_REPORT_RESET
+    REVIEW_REPORT_REQUEST, REVIEW_REPORT_SUCCESS, REVIEW_REPORT_FAIL, REVIEW_REPORT_RESET,
+    REVIEW_DELETE_RESET,
+    REVIEW_DELETE_FAIL,
+    REVIEW_DELETE_SUCCESS,
+    REVIEW_DELETE_REQUEST
 } from '../../constants/storefront/reviewConstants';
 
 export const reviewCreateReducer = (state = {}, action: any) => {
@@ -41,6 +45,16 @@ export const reviewReportReducer = (state = {}, action: any) => {
         case REVIEW_REPORT_SUCCESS: return { loading: false, success: true };
         case REVIEW_REPORT_FAIL: return { loading: false, error: action.payload };
         case REVIEW_REPORT_RESET: return {};
+        default: return state;
+    }
+};
+
+export const reviewDeleteReducer = (state = {}, action: any) => {
+    switch (action.type) {
+        case REVIEW_DELETE_REQUEST: return { loading: true };
+        case REVIEW_DELETE_SUCCESS: return { loading: false, success: true };
+        case REVIEW_DELETE_FAIL: return { loading: false, error: action.payload };
+        case REVIEW_DELETE_RESET: return {};
         default: return state;
     }
 };

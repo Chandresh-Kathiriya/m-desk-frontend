@@ -29,7 +29,7 @@ import { storefrontProductListReducer, storefrontProductDetailsReducer, storefro
 import { cartReducer } from './user/cartReducers';
 import { orderListReducer, orderDetailsReducer, orderDeliverReducer, orderCreateManualReducer, orderPayManualReducer } from './admin/orderReducers';
 import { uploadImageReducer } from './admin/uploadReducers';
-import { reviewCreateReducer, reviewUpdateReducer, reviewVoteReducer, reviewReportReducer } from './storefront/reviewReducers';
+import { reviewCreateReducer, reviewUpdateReducer, reviewVoteReducer, reviewReportReducer, reviewDeleteReducer } from './storefront/reviewReducers';
 import { couponValidateReducer } from './user/couponReducers';
 import { orderListMyReducer, orderCreateReducer, userOrderDetailsReducer, orderVerifyReducer, stripeIntentReducer } from './user/orderReducers';
 import { discountOfferListReducer, discountCouponListReducer, discountOfferCreateReducer, discountCouponCreateReducer } from './admin/discountReducers';
@@ -83,6 +83,7 @@ const rootReducer = combineReducers({
   reviewUpdate: reviewUpdateReducer,
   reviewVote: reviewVoteReducer,
   reviewReport: reviewReportReducer,
+  reviewDelete: reviewDeleteReducer,
   orderCreate: orderCreateReducer,
   couponValidate: couponValidateReducer,
   userOrderDetails: userOrderDetailsReducer,

@@ -5,6 +5,7 @@ import { listAdminProducts, deleteProduct, updateProduct } from '../../../store/
 import { RootState } from '../../../store/reducers';
 
 import styles from '../../../schemas/css/ProductList.module.css';
+import { showConfirmAlert } from '../../../common/utils/alertUtils';
 
 const ProductList: React.FC = () => {
     const dispatch = useDispatch<any>();
@@ -24,8 +25,13 @@ const ProductList: React.FC = () => {
         dispatch(listAdminProducts());
     }, [dispatch, successDelete, successUpdate]); // Refreshes when delete or update succeeds
 
-    const deleteHandler = (id: string) => {
-        if (window.confirm('Are you sure you want to delete this product? All its SKUs will be lost.')) {
+    const deleteHandler = async (id: string) => {
+        const isConfirmed = await showConfirmAlert(
+            'Delete Product?',
+            'Are you sure you want to delete this product? All its SKUs will be lost.',
+            'Yes, Delete'
+        );
+        if (isConfirmed) {
             dispatch(deleteProduct(id));
         }
     };
@@ -33,7 +39,7 @@ const ProductList: React.FC = () => {
     // --- NEW: Instant Toggle Publish Handler ---
     const handleTogglePublish = (product: any) => {
         const newStatus = !product.published;
-        
+
         // We dispatch the update action with ONLY the ID and the new published status
         dispatch(updateProduct({
             _id: product._id,
@@ -44,7 +50,7 @@ const ProductList: React.FC = () => {
     return (
         <main className={styles['page-wrapper']}>
             <div className={styles.container}>
-                
+
                 <div className={styles.card}>
                     <header className={styles['card-header']}>
                         <h1 className={styles['card-title']}>Product Catalog</h1>
@@ -97,27 +103,27 @@ const ProductList: React.FC = () => {
                                                 </span>
                                             </td>
                                             <td className={styles['align-center']}>
-                                                
+
                                                 {/* --- NEW: Interactive Toggle Switch --- */}
-                                                <label style={{ 
-                                                    display: 'inline-flex', alignItems: 'center', cursor: 'pointer', 
-                                                    gap: '8px', position: 'relative' 
+                                                <label style={{
+                                                    display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+                                                    gap: '8px', position: 'relative'
                                                 }}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={product.published} 
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={product.published}
                                                         onChange={() => handleTogglePublish(product)}
-                                                        style={{ 
-                                                            width: '36px', height: '20px', appearance: 'none', 
-                                                            backgroundColor: product.published ? '#059669' : '#cbd5e1', 
-                                                            borderRadius: '20px', cursor: 'pointer', outline: 'none', 
+                                                        style={{
+                                                            width: '36px', height: '20px', appearance: 'none',
+                                                            backgroundColor: product.published ? '#059669' : '#cbd5e1',
+                                                            borderRadius: '20px', cursor: 'pointer', outline: 'none',
                                                             transition: '0.3s', position: 'relative'
-                                                        }} 
+                                                        }}
                                                     />
                                                     {/* The white dot inside the switch */}
                                                     <div style={{
                                                         position: 'absolute', top: '2px', left: product.published ? '18px' : '2px',
-                                                        width: '16px', height: '16px', backgroundColor: 'white', 
+                                                        width: '16px', height: '16px', backgroundColor: 'white',
                                                         borderRadius: '50%', transition: '0.3s', pointerEvents: 'none'
                                                     }} />
                                                 </label>
@@ -125,14 +131,14 @@ const ProductList: React.FC = () => {
                                             </td>
                                             <td className={styles['align-right']}>
                                                 <div className={styles['action-group']}>
-                                                    <button 
-                                                        className={`${styles.btn} ${styles['btn-outline-primary']}`} 
+                                                    <button
+                                                        className={`${styles.btn} ${styles['btn-outline-primary']}`}
                                                         onClick={() => navigate(`/admin/products/${product._id}/edit`)}
                                                     >
                                                         Edit
                                                     </button>
-                                                    <button 
-                                                        className={`${styles.btn} ${styles['btn-outline-danger']}`} 
+                                                    <button
+                                                        className={`${styles.btn} ${styles['btn-outline-danger']}`}
                                                         onClick={() => deleteHandler(product._id)}
                                                     >
                                                         Delete
@@ -153,7 +159,7 @@ const ProductList: React.FC = () => {
                         </div>
                     )}
                 </div>
-                
+
             </div>
         </main>
     );

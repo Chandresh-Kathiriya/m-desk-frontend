@@ -3,7 +3,8 @@ import {
     REVIEW_CREATE_REQUEST, REVIEW_CREATE_SUCCESS, REVIEW_CREATE_FAIL,
     REVIEW_UPDATE_REQUEST, REVIEW_UPDATE_SUCCESS, REVIEW_UPDATE_FAIL,
     REVIEW_VOTE_REQUEST, REVIEW_VOTE_SUCCESS, REVIEW_VOTE_FAIL,
-    REVIEW_REPORT_REQUEST, REVIEW_REPORT_SUCCESS, REVIEW_REPORT_FAIL
+    REVIEW_REPORT_REQUEST, REVIEW_REPORT_SUCCESS, REVIEW_REPORT_FAIL,
+    REVIEW_DELETE_REQUEST, REVIEW_DELETE_SUCCESS, REVIEW_DELETE_FAIL
 } from '../../constants/storefront/reviewConstants';
 
 export const createReview = (productId: string, reviewData: any) => async (dispatch: any, getState: any) => {
@@ -55,5 +56,20 @@ export const reportReview = (productId: string, reviewId: string) => async (disp
         dispatch({ type: REVIEW_REPORT_SUCCESS });
     } catch (error: any) {
         dispatch({ type: REVIEW_REPORT_FAIL, payload: error.response?.data?.message || error.message });
+    }
+};
+
+export const deleteReview = (productId: string, reviewId: string) => async (dispatch: any, getState: any) => {
+    try {
+        dispatch({ type: REVIEW_DELETE_REQUEST });
+        
+        const { userAuth: { userInfo } } = getState();
+        const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+        
+        await axios.delete(`/api/products/${productId}/reviews/${reviewId}`, config);
+        
+        dispatch({ type: REVIEW_DELETE_SUCCESS });
+    } catch (error: any) {
+        dispatch({ type: REVIEW_DELETE_FAIL, payload: error.response?.data?.message || error.message });
     }
 };

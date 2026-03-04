@@ -77,3 +77,25 @@ export const showPromptDialog = async (title: string, inputPlaceholder: string) 
     
     return result.value; // Returns the typed text, or undefined if cancelled
 };
+
+export const showConfirmAlert = async (
+    title: string, 
+    text: string, 
+    confirmButtonText: string = 'Yes, delete it!'
+) => {
+    const result = await Swal.fire({
+        title: title,
+        text: text,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626', // Red color for dangerous actions
+        cancelButtonColor: '#6b7280',  // Neutral grey for cancel
+        confirmButtonText: confirmButtonText,
+        customClass: {
+            confirmButton: 'btn btn--primary',
+            cancelButton: 'btn btn--outline'
+        }
+    });
+    
+    return result.isConfirmed; // Returns true if they clicked Yes, false if they canceled
+};

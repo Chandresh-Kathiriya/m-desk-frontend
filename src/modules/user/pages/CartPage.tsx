@@ -6,7 +6,7 @@ import { RootState } from '../../../store/reducers';
 
 // Import CSS Module
 import styles from '../../../schemas/css/CartPage.module.css';
-import { showToast } from '../../../common/utils/alertUtils';
+import { showConfirmAlert, showToast } from '../../../common/utils/alertUtils';
 
 const CartPage: React.FC = () => {
   const dispatch = useDispatch<any>();
@@ -35,7 +35,12 @@ const CartPage: React.FC = () => {
   }, [loading, cartItems]);
 
   const removeFromCartHandler = async (sku: string) => {
-    if (window.confirm('Remove this item from your cart?')) {
+    const isConfirmed = await showConfirmAlert(
+      'Remove Product?',
+      'Are you sure you want to remove this item from your cart?',
+      'Yes, Delete'
+    );
+    if (isConfirmed) {
       setProcessingSku(sku); // Start Spinner
       await dispatch(removeFromCart(sku));
     }
@@ -114,7 +119,7 @@ const CartPage: React.FC = () => {
             {/* LEFT COLUMN: Cart Items List */}
             <section className={styles['cart-items']}>
               {cartItems.map((item: any) => {
-                
+
                 // Check if this specific item is currently being updated
                 const isProcessing = processingSku === item.sku;
 
@@ -169,11 +174,11 @@ const CartPage: React.FC = () => {
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                           </button>
-                          
+
                           {/* --- SHOW SPINNER INSTEAD OF QTY NUMBER IF PROCESSING --- */}
                           <span className={styles['qty-control__value']} style={{ width: '20px', display: 'flex', justifyContent: 'center' }}>
                             {isProcessing ? (
-                               <div className={styles.spinner} style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div>
+                              <div className={styles.spinner} style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div>
                             ) : (
                               item.qty
                             )}

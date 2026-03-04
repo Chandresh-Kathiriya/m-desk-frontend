@@ -4,15 +4,15 @@ import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { getStorefrontProductDetails, listSimilarProducts } from '../../../store/actions/storefront/productActions';
 import { addToCart } from '../../../store/actions/user/cartActions';
 import { listMyOrders } from '../../../store/actions/user/orderActions';
-import { createReview, updateReview } from '../../../store/actions/storefront/reviewActions';
-import { REVIEW_CREATE_RESET, REVIEW_UPDATE_RESET, REVIEW_VOTE_RESET, REVIEW_REPORT_RESET } from '../../../store/constants/storefront/reviewConstants';
+import { createReview, updateReview, deleteReview } from '../../../store/actions/storefront/reviewActions';
+import { REVIEW_CREATE_RESET, REVIEW_UPDATE_RESET, REVIEW_VOTE_RESET, REVIEW_REPORT_RESET, REVIEW_DELETE_RESET } from '../../../store/constants/storefront/reviewConstants';
 import { STOREFRONT_SIMILAR_PRODUCTS_RESET } from '../../../store/constants/storefront/productConstants';
 import { RootState } from '../../../store/reducers';
 import Rating from '../../../common/components/Rating';
 
 // Import CSS Module
 import styles from '../../../schemas/css/ProductDetailsPage.module.css';
-import { showToast } from '../../../common/utils/alertUtils';
+import { showConfirmAlert, showToast } from '../../../common/utils/alertUtils';
 
 const ProductDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,6 +47,9 @@ const ProductDetailsPage: React.FC = () => {
 
   const reviewReport = useSelector((state: RootState) => state.reviewReport || {});
   const { loadingId: loadingReportId, success: successReport, error: errorReport } = reviewReport as any;
+
+  const reviewDelete = useSelector((state: RootState) => state.reviewDelete || {});
+  const { loading: loadingDeleteReview, success: successDeleteReview, error: errorDeleteReview } = reviewDelete as any;
 
   // --- LOCAL UI STATES ---
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -114,6 +117,16 @@ const ProductDetailsPage: React.FC = () => {
       dispatch({ type: REVIEW_REPORT_RESET });
     }
 
+    if (successDeleteReview) {
+      showToast('Review deleted successfully!', 'success');
+      dispatch({ type: REVIEW_DELETE_RESET });
+      if (id) dispatch(getStorefrontProductDetails(id)); // Refetch the product to remove the review from the list
+    }
+
+    if (errorDeleteReview) {
+      showToast(errorDeleteReview, 'error');
+    }
+
     if (errorVote) {
       showToast(errorVote, 'error');
     }
@@ -121,7 +134,7 @@ const ProductDetailsPage: React.FC = () => {
     if (errorReport) {
       showToast(errorReport, 'error');
     }
-  }, [dispatch, id, successCreateReview, successUpdateReview, successVote, successReport, errorVote, errorReport]);
+  }, [dispatch, id, successCreateReview, successUpdateReview, successVote, successReport, successDeleteReview, errorDeleteReview, errorVote, errorReport]);
 
   // Purchase verification logic
   useEffect(() => {
@@ -337,6 +350,27 @@ const ProductDetailsPage: React.FC = () => {
     document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleDeleteReviewClick = async (reviewId: string) => {
+    // Await the user's choice from the SweetAlert dialog
+    const isConfirmed = await showConfirmAlert(
+      'Delete Review?',
+      'Are you sure you want to delete your review? This action cannot be undone.',
+      'Yes, Delete'
+    );
+
+    // If they clicked "Yes, Delete", fire the dispatch!
+    if (isConfirmed) {
+      dispatch(deleteReview(product._id, reviewId));
+
+      // Safely close the edit form if they happen to be editing the review they just deleted
+      if (editingReviewId === reviewId) {
+        setEditingReviewId(null);
+        setRating(0);
+        setComment('');
+      }
+    }
+  };
+
   return (
     <main className={styles['product-page']}>
       <div className={`container ${styles['product-page__container']}`}>
@@ -480,10 +514,6 @@ const ProductDetailsPage: React.FC = () => {
 
               <ul className={styles['review-list']}>
                 {sortedReviews.map((review: any) => {
-
-                  // --- UPGRADED isOwner CHECK ---
-                  // Uses the robust 'userId' variable you defined earlier and safely checks 
-                  // if review.user is a populated object OR a string ID
                   const isOwner = userId && (
                     review.user === userId ||
                     review.user?._id === userId ||
@@ -519,18 +549,38 @@ const ProductDetailsPage: React.FC = () => {
                           {review.isEdited && <span className={styles['review-card__edited']}>(Edited)</span>}
 
                           {/* --- UPGRADED: EDIT BUTTON --- */}
+                          {/* --- UPGRADED: EDIT & DELETE BUTTONS --- */}
                           {isOwner && (
-                            <button
-                              onClick={() => handleEditReviewClick(review)}
-                              className={styles['review-card__edit-btn']}
-                              aria-label="Edit Review"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
-                              Edit
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', marginTop: '4px' }}>
+
+                              {/* EDIT BUTTON */}
+                              <button
+                                onClick={() => handleEditReviewClick(review)}
+                                className={styles['review-card__edit-btn']}
+                                aria-label="Edit Review"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Edit
+                              </button>
+
+                              {/* DELETE BUTTON */}
+                              <button
+                                onClick={() => handleDeleteReviewClick(review._id)}
+                                className={styles['review-card__delete-btn']}
+                                disabled={loadingDeleteReview}
+                                aria-label="Delete Review"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                {loadingDeleteReview ? '...' : 'Delete'}
+                              </button>
+
+                            </div>
                           )}
                         </div>
                       </div>

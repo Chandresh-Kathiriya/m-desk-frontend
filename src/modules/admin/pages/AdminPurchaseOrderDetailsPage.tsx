@@ -6,7 +6,7 @@ import { getPurchaseOrderDetails, receivePurchaseOrder, downloadAdminPO } from '
 import { PURCHASE_DETAILS_RESET, PURCHASE_RECEIVE_RESET } from '../../../store/constants/admin/purchaseConstants';
 
 import styles from '../../../schemas/css/AdminPurchaseOrderDetailsPage.module.css';
-import { showErrorAlert, showSuccessAlert } from '../../../common/utils/alertUtils';
+import { showConfirmAlert, showErrorAlert, showSuccessAlert } from '../../../common/utils/alertUtils';
 
 const AdminPurchaseOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -54,9 +54,16 @@ const AdminPurchaseOrderDetailsPage: React.FC = () => {
     }, [successReceive, errorReceive, dispatch, id]);
 
     // Action: Unified Receive & Bill
-    const receiveGoodsHandler = (e: React.FormEvent) => {
+    const receiveGoodsHandler = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!window.confirm('Are you sure? This will add these items to your live stock and generate a payable vendor bill.')) return;
+        const isConfirmed = await showConfirmAlert(
+            'Receive Inventory?',
+            'Are you sure? This will add these items to your live stock and generate a payable vendor bill.',
+            'Yes, Receive Stock'
+        );
+      
+        // If they clicked cancel, stop the function right here
+        if (!isConfirmed) return;
         if (id) dispatch(receivePurchaseOrder(id, { invoiceDate, dueDate }));
     };
 

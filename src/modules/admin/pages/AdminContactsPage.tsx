@@ -8,6 +8,7 @@ import { CONTACT_CREATE_RESET, CONTACT_UPDATE_RESET, CONTACT_DELETE_RESET } from
 import ContactFormDialog from '../../../common/components/ContactFormDialog';
 
 import styles from '../../../schemas/css/AdminContactsPage.module.css';
+import { showConfirmAlert } from '../../../common/utils/alertUtils';
 
 const AdminContactsPage: React.FC = () => {
     const dispatch = useDispatch<any>();
@@ -79,8 +80,16 @@ const AdminContactsPage: React.FC = () => {
     };
 
     // Handle Deletion
-    const deleteHandler = (id: string) => {
-        if (window.confirm('Are you sure you want to delete this contact?')) {
+    const deleteHandler = async (id: string) => {
+        // Await the user's choice from the SweetAlert dialog
+        const isConfirmed = await showConfirmAlert(
+            'Delete Contact?',
+            'Are you sure you want to delete this contact? This action cannot be undone.',
+            'Yes, Delete'
+        );
+  
+        // If they clicked "Yes, Delete", fire the dispatch!
+        if (isConfirmed) {
             dispatch(deleteContact(id));
         }
     };
