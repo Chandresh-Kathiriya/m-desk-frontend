@@ -480,7 +480,16 @@ const ProductDetailsPage: React.FC = () => {
 
               <ul className={styles['review-list']}>
                 {sortedReviews.map((review: any) => {
-                  const isOwner = userInfo && (userInfo._id === review.user || userInfo.id === review.user);
+
+                  // --- UPGRADED isOwner CHECK ---
+                  // Uses the robust 'userId' variable you defined earlier and safely checks 
+                  // if review.user is a populated object OR a string ID
+                  const isOwner = userId && (
+                    review.user === userId ||
+                    review.user?._id === userId ||
+                    review.user?.id === userId
+                  );
+
                   return (
                     <li key={review._id} className={styles['review-card']}>
                       <div className={styles['review-card__header']}>
